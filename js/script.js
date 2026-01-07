@@ -175,7 +175,7 @@ onValue(gameRef, (snapshot) => {
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
 let jogadoresAntigos = {};
-
+let nomesAnteriores = {};
 let modoJogo = 'online'; 
 let meuLado = new URLSearchParams(window.location.search).get('lado'); 
 let mapa = [];
@@ -390,7 +390,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
     meuLado = ladoEscolhido; 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
-    // Adiciona a classe ao body para o CSS inverter os placares conforme o lado
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
@@ -403,7 +402,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (campoNome) campoNome.value = nomeDigitado;
 
     if (modoJogo === 'online') {
-        // 4. SALVAMENTO NO FIREBASE
+        // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
@@ -411,18 +410,13 @@ window.confirmarCadastro = (ladoEscolhido) => {
         set(playerStatusRef, true);
         set(playerNameRef, nomeDigitado);
         
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO AUTOMÁTICA (onDisconnect)
-        // Isso remove os dados do Firebase se o jogador fechar a aba ou perder a conexão
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-            // Limpa o status de ocupado
             pkg.onDisconnect(playerStatusRef).remove();
-            // Limpa o nome (Isso dispara o alerta "Jogador saiu" para o oponente)
             pkg.onDisconnect(playerNameRef).remove();
-            // Opcional: Limpa a foto também para não pesar o banco
             pkg.onDisconnect(playerPhotoRef).remove();
         });
 
-        // Se for o primeiro a entrar na sala vazia, reinicia o tabuleiro
         onValue(gameRef, (snap) => {
             if (!snap.exists()) reiniciar();
         }, { onlyOnce: true });
@@ -435,21 +429,25 @@ window.confirmarCadastro = (ladoEscolhido) => {
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL E FECHAMENTO DE MODAIS
+    // 7. FINALIZAÇÃO VISUAL E GATILHO INICIAL IA
     document.getElementById('modal-cadastro').style.display = 'none';
-    
     const selecaoLado = document.getElementById('selecao-lado-container');
     if (selecaoLado) selecaoLado.style.display = 'none';
 
-    // Redesenha o tabuleiro (aplica a inversão se for preto)
     desenhar();
-    
-    console.log(`Cadastro confirmado: ${nomeDigitado} jogando de ${meuLado}`);
+    console.log(`Cadastro confirmado: ${nomeDigitado} (${meuLado})`);
+
+    // --- ALTERAÇÃO ESSENCIAL: Dispara IA se ela começar o jogo ---
+    if (modoJogo === 'ia') {
+        const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
+        if (turno === idTurnoIA) {
+            console.log("Turno inicial é da IA. Iniciando jogada...");
+            setTimeout(() => {
+                jogadaDaIA();
+            }, 1000); // Pausa de 1s para o jogador ver o tabuleiro primeiro
+        }
+    }
 };
-
-
-// Variável para rastrear quem estava na sala antes
-let nomesAnteriores = {};
 
 onValue(ref(db, 'partida_unica/nomes'), (snap) => {
     if (modoJogo !== 'online') return;
@@ -457,16 +455,35 @@ onValue(ref(db, 'partida_unica/nomes'), (snap) => {
     const nomesAtuais = snap.val() || {};
 
     // VERIFICA QUEM SAIU:
-    // Se o nome existia antes mas não existe mais nos dados atuais
     Object.keys(nomesAnteriores).forEach(lado => {
-        if (nomesAnteriores[lado] && !nomesAtuais[lado]) {
+        // SÓ dispara o alerta se:
+        // 1. O nome existia e agora sumiu (nomesAtuais[lado] é nulo)
+        // 2. O lado que sumiu NÃO é o meu próprio lado
+        if (nomesAnteriores[lado] && !nomesAtuais[lado] && lado !== meuLado) {
             const nomeQueSaiu = nomesAnteriores[lado];
             exibirAlertaSaida(nomeQueSaiu);
+            
+            // Opcional: Para o jogo já que o oponente saiu
+            jogoIniciado = false;
         }
     });
 
     // Atualiza a lista para a próxima comparação
     nomesAnteriores = { ...nomesAtuais };
+    
+    // Sincroniza os nomes nos inputs do placar para ambos
+    if (nomesAtuais.vermelho) document.getElementById('input-nome-v').value = nomesAtuais.vermelho;
+    if (nomesAtuais.preto) document.getElementById('input-nome-p').value = nomesAtuais.preto;
+});
+
+
+const connectedRef = ref(db, ".info/connected");
+onValue(connectedRef, (snap) => {
+  if (snap.val() === true) {
+    console.log("Conectado ao Firebase");
+  } else {
+    console.warn("Conexão perdida temporariamente...");
+  }
 });
 
 function exibirAlertaSaida(nome) {
@@ -565,7 +582,6 @@ function desenhar() {
             const valor = mapa[r][c];
             if (valor !== 0) {
                 const peca = document.createElement('div');
-                // Define se a peça é vermelha (ímpar: 1, 3) ou preta (par: 2, 4)
                 peca.className = `peca ${valor % 2 !== 0 ? 'peca-vermelha' : 'peca-preta'} ${valor > 2 ? 'dama' : ''}`;
                 
                 // Mantém o destaque da peça selecionada
@@ -888,6 +904,8 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
 async function jogadaDaIA() {
     // Só joga se for o turno da IA (Turno 2 se jogador é 1, ou Turno 1 se jogador é 2)
     const turnoIA = (meuLado === 'vermelho' ? 2 : 1);
+    
+    // Bloqueios de segurança
     if (turno !== turnoIA || modoJogo !== 'ia') return;
 
     const idPlacar = (turnoIA === 1) ? 'box-vermelho' : 'box-preto';
@@ -911,20 +929,24 @@ async function jogadaDaIA() {
         
         if (capturas.length > 0) {
             // IA INTELIGENTE: Escolhe a jogada que captura o MAIOR número de peças
-            // Assume que 'obterTodosMvs' ou a lógica de captura retorna o peso da jogada
             jogadaEscolhida = capturas.reduce((melhor, atual) => {
-                return (atual.totalCapturas > melhor.totalCapturas) ? atual : melhor;
+                const nCapAtual = atual.totalCapturas || 1;
+                const nCapMelhor = melhor.totalCapturas || 1;
+                return (nCapAtual > nCapMelhor) ? atual : melhor;
             }, capturas[0]);
         } else {
             // 2. MOVIMENTO ESTRATÉGICO (Se não houver captura)
-            // Filtra jogadas que não entregam a peça de graça
             const jogadasSeguras = mvs.filter(m => !verificarSeSeraCapturada(m.para.r, m.para.c));
             
             if (jogadasSeguras.length > 0) {
-                // Entre as seguras, prefere avançar ou virar dama
-                jogadaEscolhida = jogadasSeguras.sort((a, b) => b.para.r - a.para.r)[0]; 
+                // Se for a vez da IA Vermelha (ID 1), ela quer diminuir o R (avançar para baixo)
+                // Se for a IA Preta (ID 2), ela quer aumentar o R (avançar para cima)
+                if (turnoIA === 1) {
+                    jogadaEscolhida = jogadasSeguras.sort((a, b) => a.para.r - b.para.r)[0];
+                } else {
+                    jogadaEscolhida = jogadasSeguras.sort((a, b) => b.para.r - a.para.r)[0];
+                }
             } else {
-                // Se tudo for perigoso, faz qualquer uma
                 jogadaEscolhida = mvs[Math.floor(Math.random() * mvs.length)];
             }
         }
@@ -937,10 +959,10 @@ async function jogadaDaIA() {
         }
 
         // 4. LÓGICA DE MULTI-CAPTURA (COMBO)
-        // Se após validarEMover o turno ainda for o da IA, ela deve continuar comendo
         if (turno === turnoIA) {
             labelStatus.innerText = "Continuando combo...";
-            setTimeout(() => jogadaDaIA(), 800); // Chama novamente para a próxima captura
+            setTimeout(() => jogadaDaIA(), 800);
+            return; // Retorna para não resetar o texto do placar precocemente
         }
     }
 
