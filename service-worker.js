@@ -4,8 +4,8 @@ const ASSETS = [
   './index.html',
   './css/styles.css',
   './js/script.js',
-  '/img/icon-192.png',
-  '/img/icon-512.png',
+  './img/icon-192.png',
+  './img/icon-512.png',
   './movimento.mp3',
 ];
 
