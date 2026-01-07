@@ -613,19 +613,34 @@ function atualizarUI() {
     document.getElementById('box-preto').classList.toggle('turno-ativo-preto', turno === 2);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function clicar(r, c) {
-    // 1. BLOQUEIO DE TURNO: Verifica se é a vez do jogador correto
+    // 1. BLOQUEIO DE TURNO ONLINE
     if (modoJogo === 'online') {
-        // Converte para ID numérico: Vermelho = 1, Preto = 2
+        // Define o ID do jogador: Vermelho = 1, Preto = 2
         const meuTurnoID = (meuLado === 'vermelho' ? 1 : 2);
         
-        // Se o turno do jogo não for o meu ID, eu não posso clicar
+        // Se não for o turno do jogador, bloqueia o clique completamente
         if (turno !== meuTurnoID) {
-            console.log("Não é sua vez! Turno atual:", turno, "Seu lado:", meuLado);
+            console.log("Aguarde sua vez. Turno atual:", turno);
             return;
         }
-
-        // Impede cliques se o oponente ainda não estiver pronto
+        
+        // Impede cliques se o jogo ainda não estiver iniciado (oponente ausente)
         if (!jogoIniciado) {
             if (typeof window.exibirFeedback === 'function') {
                 window.exibirFeedback("Aguardando oponente...", "erro");
@@ -635,16 +650,14 @@ function clicar(r, c) {
     }
 
     const valor = mapa[r][c];
-    
-    // 2. LÓGICA DE MOVIMENTOS POSSÍVEIS
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-    // 3. SELEÇÃO DE PEÇA (Se clicou em uma peça própria)
-    // A conta (valor % 2 === turno % 2) identifica se a peça pertence ao dono do turno
+    // 2. SELEÇÃO DE PEÇA (Se clicou em uma peça do próprio turno)
+    // A lógica (valor % 2 === turno % 2) garante que peças 2 e 4 funcionem para o turno 2 (Preto)
     if (valor !== 0 && valor % 2 === turno % 2) {
         
-        // Regra de Captura Obrigatória
+        // Verifica regra de captura obrigatória
         if (capturasObrigatorias.length > 0) {
             const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
             
@@ -656,19 +669,33 @@ function clicar(r, c) {
             }
         }
 
-        // Seleciona a peça e redesenha para mostrar o destaque amarelo
+        // Seleciona a peça e redesenha APENAS aqui para mostrar o destaque amarelo
         selecionada = { r, c };
         desenhar(); 
     } 
 
-    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em casa vazia)
+    // 3. MOVIMENTAÇÃO (Se já existe peça selecionada e clicou em casa vazia)
     else if (selecionada && valor === 0) {
-        // Tenta mover para o destino clicado
         validarEMover(r, c);
-        
-        // No modo online, o validarEMover já faz o salvarNoFirebase() e o desenhar()
+        // O validarEMover já chama o desenhar() e salvarNoFirebase() internamente
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
