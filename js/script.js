@@ -24,44 +24,163 @@ const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
 
 // 2. SEGUNDO: Configurar os "Ouvintes" (onValue)
 
+
+
+
+// ATUALIZE o ouvinte do Firebase para o oponente ver o emoji
+onValue(emojiRef, (snap) => {
+    const data = snap.val();
+    if (data && data.lado !== meuLado) {
+        // Se o timestamp for recente (menos de 2 segundos), mostra o emoji
+        if (Date.now() - data.timestamp < 2000) {
+            dispararEfeitoEmoji(data.emoji, data.lado);
+        }
+    }
+});
+
 // Monitor de nomes (Sincroniza Bruno e Lucas no placar)
 onValue(nomesRef, (snap) => {
+    // Se não estiver online, ignore atualizações de nomes vindas da nuvem
     if (modoJogo !== 'online') return;
+    
     const nomes = snap.val() || {};
     if (nomes.vermelho) document.getElementById('input-nome-v').value = nomes.vermelho;
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-// Monitor de ocupação (Bloqueia botões de cores já escolhidas)
+
+
+
+
+
+
+
+
+
+
+
+// Variável para comparar o estado anterior (coloque fora da função onValue)
+
+
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
-    const jogadores = snap.val() || {};
     
+    const jogadoresAtuais = snap.val() || {};
     const btnV = document.getElementById('btn-escolher-vermelho');
     const btnP = document.getElementById('btn-escolher-preto');
     
+    // 1. NOTIFICAÇÃO DE ENTRADA (Saber quem acabou de entrar)
+    // Se o Vermelho não estava no banco e agora está, e não sou eu
+    if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
+        if (meuLado !== 'vermelho') notificarEntrada('Vermelho');
+    }
+    // Se o Preto não estava no banco e agora está, e não sou eu
+    if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
+        if (meuLado !== 'preto') notificarEntrada('Preto');
+    }
+
+    // 2. GERENCIAMENTO DOS BOTÕES DE ESCOLHA
     if (btnV) {
-        if (jogadores.vermelho) {
+        if (jogadoresAtuais.vermelho) {
             btnV.disabled = true;
-            btnV.style.display = 'none'; // Se quiser esconder completamente
+            btnV.style.display = 'none';
         } else {
             btnV.disabled = false;
-            btnV.style.display = 'inline-block';
-            btnV.innerText = "Jogar com Vermelhas";
+            btnV.style.display = 'flex';
+            btnV.innerText = "Vermelho Disponível";
         }
     }
 
     if (btnP) {
-        if (jogadores.preto) {
+        if (jogadoresAtuais.preto) {
             btnP.disabled = true;
             btnP.style.display = 'none';
         } else {
             btnP.disabled = false;
-            btnP.style.display = 'inline-block';
-            btnP.innerText = "Jogar com Pretas";
+            btnP.style.display = 'flex';
+            btnP.innerText = "Preto Disponível";
         }
     }
+
+    // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
+    const totalJogadores = Object.keys(jogadoresAtuais).length;
+    
+    // Atualiza os pontinhos verde/cinza no placar
+    atualizarIndicadoresStatus(jogadoresAtuais);
+
+    if (totalJogadores === 2) {
+        if (!jogoIniciado) {
+            console.log("Partida Pronta! Ambos os jogadores estão online.");
+        }
+        jogoIniciado = true;
+    } else {
+        jogoIniciado = false;
+    }
+
+    // Guarda o estado atual para a próxima comparação
+    jogadoresAntigos = { ...jogadoresAtuais };
 });
+
+// Função para exibir o alerta visual de entrada
+function notificarEntrada(lado) {
+    const alerta = document.createElement('div');
+    alerta.className = 'feedback-entrada';
+    alerta.innerHTML = `<span>🎮</span> Jogador <b>${lado}</b> entrou na sala!`;
+    document.body.appendChild(alerta);
+
+    // Remove automaticamente após 3 segundos
+    setTimeout(() => {
+        alerta.style.opacity = '0';
+        setTimeout(() => alerta.remove(), 500);
+    }, 3000);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Função auxiliar para atualizar as bolinhas de status
+function atualizarIndicadoresStatus(jogadores) {
+    const statusV = document.getElementById('ponto-status-v'); // Crie esses IDs no HTML
+    const statusP = document.getElementById('ponto-status-p');
+    const textoV = document.getElementById('texto-status-v');
+    const textoP = document.getElementById('texto-status-p');
+
+    // Status Vermelho
+    if (jogadores.vermelho) {
+        if (statusV) statusV.classList.add('online');
+        if (textoV) textoV.innerText = "Online";
+    } else {
+        if (statusV) statusV.classList.remove('online');
+        if (textoV) textoV.innerText = "Aguardando...";
+    }
+
+    // Status Preto
+    if (jogadores.preto) {
+        if (statusP) statusP.classList.add('online');
+        if (textoP) textoP.innerText = "Online";
+    } else {
+        if (statusP) statusP.classList.remove('online');
+        if (textoP) textoP.innerText = "Aguardando...";
+    }
+}
+
 
 // Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -78,6 +197,9 @@ onValue(gameRef, (snapshot) => {
 });
 
 // --- VARIÁVEIS GLOBAIS ---
+let jogoIniciado = false;
+let jogadoresAntigos = {};
+
 let modoJogo = 'online'; 
 let meuLado = new URLSearchParams(window.location.search).get('lado'); 
 let mapa = [];
@@ -235,15 +357,6 @@ document.addEventListener('mousedown', (event) => {
     }
 });
 
-window.enviarEmoji = function(emoji) {
-    document.getElementById('modal-emoji-selecao').classList.remove('active');
-    if (modoJogo === 'online') {
-        set(emojiRef, { texto: emoji, lado: meuLado, ts: Date.now() });
-    } else {
-        exibirEmojiNaTela(emoji, meuLado);
-    }
-};
-
 function exibirEmojiNaTela(emoji, lado) {
     const boxId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
     const box = document.getElementById(boxId);
@@ -261,12 +374,53 @@ onValue(emojiRef, (snap) => {
 });
 
 // --- LÓGICA DO JOGO ---
-window.setModo = (modo) => {
+window.selecionarModoCard = (modo) => {
+    const nome = document.getElementById('modal-input-nome').value.trim();
+    
+    // Validação Profissional: Não deixa escolher o modo sem o nome
+    if (nome.length < 3) {
+        const erro = document.getElementById('nome-error');
+        erro.innerText = "Digite seu nome";
+        document.getElementById('modal-input-nome').style.borderColor = "#ff5f6d";
+        return;
+    }
+
+    // Limpa erros
+    document.getElementById('nome-error').innerText = "";
+    document.getElementById('modal-input-nome').style.borderColor = "#333";
+
+    // Define o modo
     modoJogo = modo;
-    document.getElementById('btn-ia').classList.toggle('ativo', modo === 'ia');
-    document.getElementById('btn-online').classList.toggle('ativo', modo === 'online');
-    document.getElementById('selecao-lado-container').style.display = 'block';
+
+    // Feedback visual nos cards
+    document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById(`card-${modo}`).classList.add('selected');
+
+    // Mostra a escolha de lados com animação
+    const sideSelection = document.getElementById('side-selection');
+    sideSelection.style.display = 'block';
+    sideSelection.style.animation = 'fadeIn 0.5s ease';
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
@@ -279,28 +433,35 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     meuLado = ladoEscolhido;
 
+    // 1. ATUALIZAÇÃO LOCAL: Define seu nome no placar imediatamente (Online ou IA)
+    const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+    document.getElementById(idMeuInput).value = nomeDigitado;
+
     if (modoJogo === 'online') {
-        // 1. Salva no Firebase imediatamente
+        // --- SALVA NO FIREBASE: Apenas se for online ---
         set(ref(db, `partida_unica/jogadores/${ladoEscolhido}`), true);
         set(ref(db, `partida_unica/nomes/${ladoEscolhido}`), nomeDigitado);
         
-        // 2. Esconde o seletor
-        document.getElementById('modal-cadastro').style.display = 'none';
-        document.getElementById('selecao-lado-container').style.display = 'none';
-
-        // Se for o primeiro a entrar, reinicia o tabuleiro
+        // Configuração da sala online
         onValue(gameRef, (snap) => {
             if (!snap.exists()) reiniciar();
         }, { onlyOnce: true });
 
     } else {
-        // Lógica da IA (Máquina)
-        document.getElementById('input-nome-' + (meuLado === 'vermelho' ? 'p' : 'v')).value = "Máquina 🤖";
-        document.getElementById('modal-cadastro').style.display = 'none';
+        // --- MODO TREINAMENTO (IA): Apenas local ---
+        const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
+        document.getElementById('input-nome-' + ladoIA).value = "Máquina 🤖";
         reiniciar();
+    }
+
+    // Fecha o modal e inicia visualmente
+    document.getElementById('modal-cadastro').style.display = 'none';
+    if(document.getElementById('selecao-lado-container')) {
+        document.getElementById('selecao-lado-container').style.display = 'none';
     }
     desenhar();
 };
+
 
 window.validarCliqueAvatar = (ladoClicado) => {
     // Se estiver no modo Online
@@ -395,6 +556,106 @@ function desenhar() {
     atualizarUI();
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+function atualizarDestaqueTurno() {
+    const boxV = document.getElementById('box-vermelho');
+    const boxP = document.getElementById('box-preto');
+
+    if (turno === 1) {
+        boxV.classList.add('sua-vez');
+        boxP.classList.remove('sua-vez');
+    } else {
+        boxP.classList.add('sua-vez');
+        boxV.classList.remove('sua-vez');
+    }
+}
+
+// Função para disparar o efeito visual do emoji
+function dispararEfeitoEmoji(emoji, lado) {
+    const cardId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
+    const cardElement = document.getElementById(cardId);
+    
+    if (!cardElement) return;
+
+    // Cria o elemento do emoji
+    const emojiElement = document.createElement('div');
+    emojiElement.className = 'floating-emoji';
+    emojiElement.innerText = emoji;
+
+    // Pega a posição do card para saber de onde o emoji sai
+    const rect = cardElement.getBoundingClientRect();
+    const centerX = rect.left + (rect.width / 2) - 20; // Ajuste para centralizar
+    const centerY = rect.top;
+
+    emojiElement.style.left = `${centerX}px`;
+    emojiElement.style.top = `${centerY}px`;
+
+    document.body.appendChild(emojiElement);
+
+    // Remove o elemento da memória depois que a animação termina
+    setTimeout(() => {
+        emojiElement.remove();
+    }, 2500);
+}
+
+window.enviarEmoji = function(emoji) {
+    // 1. FECHA O MODAL IMEDIATAMENTE (Tenta por ID e por Classe)
+    const modalEmoji = document.getElementById('modal-emoji-selecao');
+    if (modalEmoji) {
+        modalEmoji.style.display = 'none'; // Garante o fechamento visual
+        modalEmoji.classList.remove('active'); // Remove classe em inglês
+        modalEmoji.classList.remove('ativo');  // Remove classe em português
+        modalEmoji.classList.remove('show');   // Por segurança
+    }
+
+    // 2. EFEITO VISUAL (O emoji subindo no tabuleiro)
+    if (typeof dispararEfeitoEmoji === 'function') {
+        dispararEfeitoEmoji(emoji, meuLado);
+    }
+
+    // 3. LÓGICA DE ENVIO
+    if (modoJogo === 'online') {
+        // Usando os nomes de campos que o seu Firebase está esperando
+        set(emojiRef, { 
+            emoji: emoji, 
+            lado: meuLado, 
+            timestamp: Date.now() 
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function atualizarUI() {
     document.getElementById('capturas-v').innerText = capturasV;
     document.getElementById('capturas-p').innerText = capturasP;
@@ -477,13 +738,22 @@ window.mostrarAvisoCaptura = function() {
 };
 
 function validarEMover(r, c) {
+    // --- NOVA TRAVA DE SEGURANÇA ONLINE ---
+    // Impede mover se for modo online e o oponente ainda não entrou ou saiu
+    if (modoJogo === 'online' && !jogoIniciado) {
+        if (typeof window.exibirFeedback === 'function') {
+            window.exibirFeedback("Aguardando oponente para começar...", "erro");
+        }
+        return;
+    }
+
     // 1. Obtém todos os movimentos possíveis para o turno atual
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     
     // 2. Verifica se existe alguma captura obrigatória no tabuleiro
     const temCapturaNoTabuleiro = todasAsJogadas.some(m => m.cap);
 
-    // 3. Procura se o clique do jogador (de onde -> para) corresponde a um movimento válido
+    // 3. Procura se o clique do jogador corresponde a um movimento válido
     const movValido = todasAsJogadas.find(m => 
         m.de.r === selecionada.r && 
         m.de.c === selecionada.c && 
@@ -491,43 +761,39 @@ function validarEMover(r, c) {
         m.para.c === c
     );
 
-    // Se o movimento não existe na lista de permitidos, ignora
     if (!movValido) return;
 
-    // 4. REGRA DE OBRIGATORIEDADE COM FEEDBACK VISUAL
-    // Se há capturas no tabuleiro e o movimento escolhido não é uma captura, bloqueia
+    // 4. REGRA DE OBRIGATORIEDADE
     if (temCapturaNoTabuleiro && !movValido.cap) {
-        // Chama a função que exibe o aviso bonito no placar
         if (typeof window.mostrarAvisoCaptura === 'function') {
             window.mostrarAvisoCaptura();
+        } else {
+            alert("Captura obrigatória!");
         }
         return; 
     }
 
     // 5. EXECUÇÃO DO MOVIMENTO
     if (movValido.cap) {
-        // Se for captura, identifica qual peça foi comida
         const rCap = movValido.cap.r;
         const cCap = movValido.cap.c;
         const valorPecaComida = mapa[rCap][cCap];
 
-        // Animação para o placar
         if (typeof animarPecaParaPlacar === 'function') {
             animarPecaParaPlacar(rCap, cCap, valorPecaComida);
         }
         
-        mapa[rCap][cCap] = 0; // Remove a peça capturada
+        mapa[rCap][cCap] = 0; 
         if (turno === 1) capturasV++; else capturasP++;
-        tocarSom('cap');
+        if (typeof tocarSom === 'function') tocarSom('cap');
     } else {
-        tocarSom('move'); // Som de movimento simples
+        if (typeof tocarSom === 'function') tocarSom('move');
     }
 
-    // 6. ATUALIZAÇÃO DA POSIÇÃO DA PEÇA
+    // 6. ATUALIZAÇÃO DA POSIÇÃO E PROMOÇÃO A DAMA
     const pecaValor = mapa[selecionada.r][selecionada.c];
     let pecaFinal = pecaValor;
 
-    // Promoção a Dama ao chegar nas extremidades
     if ((turno === 1 && r === 0) || (turno === 2 && r === 7)) {
         if (pecaValor <= 2) pecaFinal = (turno === 1 ? 3 : 4);
     }
@@ -544,22 +810,47 @@ function validarEMover(r, c) {
     );
 
     if (temMais) {
-        selecionada = { r, c }; // Mantém a peça ativa para a próxima captura
+        selecionada = { r, c }; 
     } else {
         selecionada = null;
-        turno = (turno === 1 ? 2 : 1); // Passa a vez
+        turno = (turno === 1 ? 2 : 1); 
         
-        verificarFimDeJogo();
+        if (typeof verificarFimDeJogo === 'function') verificarFimDeJogo();
 
+        // --- SINCRONIZAÇÃO ONLINE ---
         if (modoJogo === 'online') {
-            if (typeof window.salvarNoFirebase === 'function') window.salvarNoFirebase();
-        } else if (modoJogo === 'ia') {
-            if (typeof jogadaDaIA === 'function') jogadaDaIA();
+            // Salva o estado atualizado no Firebase para o oponente ver
+            if (typeof window.salvarNoFirebase === 'function') {
+                window.salvarNoFirebase();
+            }
+        } else if (modoJogo === 'ia' && turno !== meuLado) {
+            // Se for IA, dispara a jogada da máquina após um pequeno delay
+            if (typeof jogadaDaIA === 'function') {
+                setTimeout(jogadaDaIA, 600);
+            }
         }
     }
     
-    desenhar(); // Atualiza o tabuleiro visualmente
+    desenhar(); 
+    // Atualiza o destaque visual de quem é a vez (badge e borda do card)
+    if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
