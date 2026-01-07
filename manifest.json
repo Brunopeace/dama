@@ -1,7 +1,9 @@
 {
-  "name": "Dama",
+  "id": "/dama/",
+  "name": "Dama Pro Online",
   "short_name": "Dama",
-  "start_url": ".",
+  "start_url": "/dama/index.html",
+  "scope": "/dama/",
   "display": "standalone",
   "background_color": "#0f0f0f",
   "theme_color": "#0f0f0f",
