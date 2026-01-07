@@ -15,26 +15,57 @@
     </div>
 
     <div id="modal-cadastro" class="modal-overlay">
-        <div class="modal-card">
-            <div style="font-size: 40px; margin-bottom: 15px;">🎲</div>
-            <h2>DAMA</h2>
-            
-            <input type="text" id="modal-input-nome" placeholder="Seu nome Aqui" maxlength="12">
-            
-            <div class="selecao-modo">
-                <button onclick="setModo('ia')" id="btn-ia" class="btn-modo">🤖 Contra a Máquina</button>
-                <button onclick="setModo('online')" id="btn-online" class="btn-modo">🌐 Jogar Online</button>
+    <div class="modal-card professional-ui">
+        <div class="modal-header">
+            <div class="logo-circle">
+                <img src="img/icon-192.png" alt="Logo" class="logo-img">
+            </div>
+            <h2>Bem-vindo</h2>
+            <p>Configure seu perfil para começar</p>
+        </div>
+
+        <div class="modal-body">
+            <div class="input-group">
+                <label for="modal-input-nome">Como quer ser chamado?</label>
+                <div class="input-with-icon">
+                    <span class="icon">👤</span>
+                    <input type="text" id="modal-input-nome" placeholder="Digite seu apelido..." maxlength="12">
+                </div>
+                <span id="nome-error" class="error-msg"></span>
             </div>
 
-            <div id="selecao-lado-container" style="display: none; margin-top: 20px;">
-                <p>Escolha seu lado:</p>
-                <div class="selecao-lado">
-                    <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="btn-lado btn-v">VERMELHO</button>
-                    <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="btn-lado btn-p">PRETO</button>
+            <div class="step-label">Selecione o modo de jogo</div>
+            <div class="modo-grid">
+                <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
+                    <span class="card-icon">🤖</span>
+                    <div class="card-info">
+                        <span class="card-title">Treinamento</span>
+                        <span class="card-desc">Contra a Máquina</span>
+                    </div>
+                </div>
+                <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
+                    <span class="card-icon">🌐</span>
+                    <div class="card-info">
+                        <span class="card-title">Competitivo</span>
+                        <span class="card-desc">Partida Online</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="side-selection" class="side-container" style="display: none;">
+                <div class="step-label">Escolha sua cor</div>
+                <div class="side-grid">
+                    <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
+                        <span class="dot"></span> Vermelho
+                    </button>
+                    <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
+                        <span class="dot"></span> Preto
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <div class="placar-container">
         <div id="box-preto" class="count-box">
