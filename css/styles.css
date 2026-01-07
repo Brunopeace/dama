@@ -72,28 +72,35 @@ body.visao-preto .centro {
     to { transform: translate(-50%, 0); opacity: 1; }
 }
 
-.feedback-saida {
+/* Estilo unificado para avisos de entrada e saída */
+.feedback-entrada, .feedback-saida {
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(255, 60, 60, 0.9);
+    background: rgba(0, 0, 0, 0.8); /* Fundo escuro elegante */
     color: white;
-    padding: 12px 25px;
-    border-radius: 50px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    z-index: 9999;
-    font-family: sans-serif;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    z-index: 10000;
     display: flex;
     align-items: center;
-    gap: 10px;
-    transition: all 0.5s ease;
-    animation: slideDown 0.5s ease forwards;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    animation: feedbackAparecer 0.4s ease-out forwards;
 }
 
-@keyframes slideDown {
-    from { top: -100px; opacity: 0; }
-    to { top: 20px; opacity: 1; }
+/* Cor específica para o alerta de saída (opcional: manter vermelho ou deixar igual) */
+.feedback-saida {
+    border: 1px solid #ff5f6d; /* Uma borda fina vermelha para indicar alerta */
+}
+
+@keyframes feedbackAparecer {
+    from { transform: translate(-50%, -20px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
 }
 
 /* CONTAINER DO BOTÃO PWA - FIXO NA LATERAL DIREITA */
