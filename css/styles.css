@@ -59,7 +59,7 @@ body.visao-preto .centro {
     border: 1px solid #ffce00;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     z-index: 11000;
-    animation: subirEntrada 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: subirEntrada 2.0s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     transition: opacity 0.5s;
     font-size: 14px;
     display: flex;
@@ -73,7 +73,7 @@ body.visao-preto .centro {
 }
 
 /* Estilo unificado para avisos de entrada e saída */
-.feedback-entrada, .feedback-saida {
+.feedback-saida {
     position: fixed;
     top: 20px;
     left: 50%;
@@ -90,7 +90,7 @@ body.visao-preto .centro {
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     pointer-events: none;
     transition: opacity 0.5s ease, transform 0.5s ease;
-    animation: feedbackAparecer 0.4s ease-out forwards;
+    animation: feedbackAparecer 3.0s ease-out forwards;
 }
 
 /* Cor específica para o alerta de saída (opcional: manter vermelho ou deixar igual) */
