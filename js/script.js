@@ -614,23 +614,18 @@ function atualizarUI() {
 }
 
 function clicar(r, c) {
+    // 1. BLOQUEIO DE TURNO: Verifica se é a vez do jogador correto
     if (modoJogo === 'online') {
-        // 1. Garante que meuLado existe e está correto
-        if (!meuLado) {
-            console.error("Erro: Lado não definido!");
+        // Converte para ID numérico: Vermelho = 1, Preto = 2
+        const meuTurnoID = (meuLado === 'vermelho' ? 1 : 2);
+        
+        // Se o turno do jogo não for o meu ID, eu não posso clicar
+        if (turno !== meuTurnoID) {
+            console.log("Não é sua vez! Turno atual:", turno, "Seu lado:", meuLado);
             return;
         }
 
-        // 2. Define qual o ID numérico do MEU lado
-        const meuTurnoID = (meuLado === 'vermelho' ? 1 : 2);
-        
-        // 3. Se não for a minha vez, não faz nada
-        if (turno !== meuTurnoID) {
-            console.log("Aguarde a sua vez. Turno atual: " + turno + " Seu ID: " + meuTurnoID);
-            return;
-        }
-        
-        // 4. Se o oponente não estiver na sala, bloqueia
+        // Impede cliques se o oponente ainda não estiver pronto
         if (!jogoIniciado) {
             if (typeof window.exibirFeedback === 'function') {
                 window.exibirFeedback("Aguardando oponente...", "erro");
@@ -640,27 +635,40 @@ function clicar(r, c) {
     }
 
     const valor = mapa[r][c];
+    
+    // 2. LÓGICA DE MOVIMENTOS POSSÍVEIS
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-    // SELEÇÃO: Se clicar numa peça preta (2 ou 4) e for o turno 2
+    // 3. SELEÇÃO DE PEÇA (Se clicou em uma peça própria)
+    // A conta (valor % 2 === turno % 2) identifica se a peça pertence ao dono do turno
     if (valor !== 0 && valor % 2 === turno % 2) {
+        
+        // Regra de Captura Obrigatória
         if (capturasObrigatorias.length > 0) {
             const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
+            
             if (!estaPecaPodeComer) {
-                if (typeof window.mostrarAvisoCaptura === 'function') window.mostrarAvisoCaptura();
+                if (typeof window.mostrarAvisoCaptura === 'function') {
+                    window.mostrarAvisoCaptura();
+                }
                 return; 
             }
         }
+
+        // Seleciona a peça e redesenha para mostrar o destaque amarelo
         selecionada = { r, c };
-        desenhar(); // Mostra o destaque amarelo no PC do Carlos
+        desenhar(); 
     } 
-    // MOVIMENTO: Se já selecionou e clicou num destino vazio
+
+    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em casa vazia)
     else if (selecionada && valor === 0) {
+        // Tenta mover para o destino clicado
         validarEMover(r, c);
+        
+        // No modo online, o validarEMover já faz o salvarNoFirebase() e o desenhar()
     }
 }
-
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
