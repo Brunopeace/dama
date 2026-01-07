@@ -1,4 +1,4 @@
-const CACHE_NAME = 'damas-pro-v3';
+const CACHE_NAME = 'dama-v1';
 const ASSETS = [
   '/',
   '/index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   '/js/script.js',
   '/img/icon-192.png',
   '/img/icon-512.png',
-  '/movimento.mp3',
+  '/movimento.mp3'
 ];
 
 // Instalação: Salva os arquivos no cache
