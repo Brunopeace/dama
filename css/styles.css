@@ -19,6 +19,34 @@ body {
     overflow-x: hidden;
 }
 
+/* Container principal */
+#game-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+}
+
+/* Configuração de ordem padrão (Vermelho em baixo) */
+#container-topo { order: 1; } /* Preto inicia no topo */
+.centro         { order: 2; } /* Tabuleiro sempre no meio */
+#container-base { order: 3; } /* Vermelho inicia na base */
+
+/* INVERSÃO: Quando o jogador for o PRETO */
+body.visao-preto #container-topo {
+    order: 3; /* Placar Preto desce para a base */
+}
+
+body.visao-preto #container-base {
+    order: 1; /* Placar Vermelho sobe para o topo */
+}
+
+/* Garante que o tabuleiro não mude de lugar na inversão */
+body.visao-preto .centro {
+    order: 2;
+}
+
 .feedback-entrada {
     position: fixed;
     bottom: 20px;
