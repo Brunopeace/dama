@@ -150,25 +150,31 @@ function atualizarIndicadoresStatus(jogadores) {
 
 
 // Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
+// APAGUE OS DOIS ANTERIORES E USE APENAS ESTE:
 onValue(gameRef, (snapshot) => {
     if (modoJogo !== 'online') return;
     
-    // TRAVA DE SEGURANÇA: Se eu estou com uma peça selecionada para mover, 
-    // não deixo o Firebase resetar meu tabuleiro agora.
+    const data = snapshot.val();
+    if (!data || !data.mapa) return;
+
+    // A TRAVA: Se eu selecionei uma peça, ignoro a atualização do banco
+    // para que o meu clique não seja cancelado pela rede.
     if (selecionada !== null) return;
 
-    const data = snapshot.val();
-    if (data && data.mapa) {
-        mapa = data.mapa;
-        turno = data.turno;
-        capturasV = data.capturasV;
-        capturasP = data.capturasP;
-        
-        // Atualiza a interface completa
-        desenhar();
-        if (typeof atualizarUI === 'function') atualizarUI();
-        if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
-    }
+    // Atualiza as variáveis globais com os dados que vieram da nuvem
+    mapa = data.mapa;
+    turno = data.turno;
+    capturasV = data.capturasV;
+    capturasP = data.capturasP;
+    
+    // Atualiza o visual
+    desenhar();
+    
+    // Chama as funções de interface se elas existirem
+    if (typeof atualizarUI === 'function') atualizarUI();
+    if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
+
+    console.log("Tabuleiro sincronizado. Turno atual:", turno);
 });
 
 // --- VARIÁVEIS GLOBAIS ---
@@ -225,7 +231,6 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
-
 
 // --- SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
 window.carregarFoto = function(event, imgId, iconId) {
@@ -578,67 +583,53 @@ function atualizarUI() {
 }
 
 function clicar(r, c) {
-    // 1. BLOQUEIO DE TURNO E PRESENÇA
     if (modoJogo === 'online') {
-        // Garantimos que meuLado esteja em minúsculo para evitar erro de comparação
-        const meuLadoNormalizado = meuLado ? meuLado.toLowerCase() : "";
-        const meuTurnoID = (meuLadoNormalizado === 'vermelho' ? 1 : 2);
+        // 1. Garante que meuLado existe e está correto
+        if (!meuLado) {
+            console.error("Erro: Lado não definido!");
+            return;
+        }
+
+        // 2. Define qual o ID numérico do MEU lado
+        const meuTurnoID = (meuLado === 'vermelho' ? 1 : 2);
         
-        // Se não for a vez do Carlos (Preto/2) no computador dele, bloqueia
+        // 3. Se não for a minha vez, não faz nada
         if (turno !== meuTurnoID) {
-            console.log("Aguarde sua vez! Turno atual:", turno, "Seu ID:", meuTurnoID);
+            console.log("Aguarde a sua vez. Turno atual: " + turno + " Seu ID: " + meuTurnoID);
             return;
         }
         
-        // Impede cliques se o oponente ainda não estiver na sala ou tiver saído
+        // 4. Se o oponente não estiver na sala, bloqueia
         if (!jogoIniciado) {
             if (typeof window.exibirFeedback === 'function') {
                 window.exibirFeedback("Aguardando oponente...", "erro");
-            } else {
-                console.warn("Aguardando oponente para iniciar...");
             }
             return;
         }
     }
 
     const valor = mapa[r][c];
-    
-    // 2. LÓGICA DE MOVIMENTOS POSSÍVEIS
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-    // 3. SELEÇÃO DE PEÇA (Se clicou em uma peça própria)
-    // valor % 2 === turno % 2 garante que peças 1 e 3 sejam do turno 1, e 2 e 4 do turno 2
+    // SELEÇÃO: Se clicar numa peça preta (2 ou 4) e for o turno 2
     if (valor !== 0 && valor % 2 === turno % 2) {
-        
-        // Regra de Captura Obrigatória
         if (capturasObrigatorias.length > 0) {
             const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
-            
             if (!estaPecaPodeComer) {
-                if (typeof window.mostrarAvisoCaptura === 'function') {
-                    window.mostrarAvisoCaptura();
-                }
+                if (typeof window.mostrarAvisoCaptura === 'function') window.mostrarAvisoCaptura();
                 return; 
             }
         }
-
-        // Seleciona a peça localmente
         selecionada = { r, c };
-        
-        // Redesenha para aplicar a borda amarela (.selecionada)
-        desenhar(); 
+        desenhar(); // Mostra o destaque amarelo no PC do Carlos
     } 
-
-    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em uma casa vazia)
+    // MOVIMENTO: Se já selecionou e clicou num destino vazio
     else if (selecionada && valor === 0) {
-        // Tenta executar o movimento
         validarEMover(r, c);
-        
-        // Importante: No modo online, o validarEMover já contém o desenhar() 
-        // e o salvarNoFirebase(), então não precisamos de nada extra aqui.
     }
 }
+
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
@@ -986,26 +977,5 @@ function obterTodosMvs(m, j) {
     }
     return res;
 }
-
-
-onValue(gameRef, (snap) => {
-    if (modoJogo !== 'online') return;
-    
-    // TRAVA: Se eu estou decidindo um movimento (selecionada != null), 
-    // ignore atualizações externas para não resetar meu clique.
-    if (selecionada !== null) return;
-
-    const d = snap.val();
-    if (d && d.mapa) {
-        mapa = d.mapa; 
-        turno = d.turno;
-        capturasV = d.capturasV; 
-        capturasP = d.capturasP;
-        
-        desenhar();
-        if (typeof atualizarUI === 'function') atualizarUI();
-    }
-});
-
 
 reiniciar();
