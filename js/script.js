@@ -117,16 +117,18 @@ btnInstalar.addEventListener('click', async () => {
     }
 });
 
-// Registro do Service Worker
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').then(reg => {
-            console.log('SW registrado com sucesso ✅!', reg.scope);
+        // Adicionamos o { scope: './' } para garantir que ele se limite à pasta atual
+        navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+        .then(reg => {
+            console.log('SW do Jogo de Dama registrado ✅! Escopo:', reg.scope);
         }).catch(err => {
-            console.log('Falha ao registrar SW:', err);
+            console.log('Erro ao registrar SW:', err);
         });
     });
 }
+
 
 // --- SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
 window.carregarFoto = function(event, imgId, iconId) {
