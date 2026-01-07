@@ -1,7 +1,6 @@
 {
   "name": "Dama",
   "short_name": "Dama",
-  "description": "Dama Multiplayer",
   "start_url": "/dama/index.html",
   "scope": "/dama/",
   "display": "standalone",
