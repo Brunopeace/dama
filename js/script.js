@@ -22,11 +22,6 @@ const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
 
-// 2. SEGUNDO: Configurar os "Ouvintes" (onValue)
-
-
-
-
 // ATUALIZE o ouvinte do Firebase para o oponente ver o emoji
 onValue(emojiRef, (snap) => {
     const data = snap.val();
@@ -395,7 +390,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
     meuLado = ladoEscolhido; 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
-    // Adiciona a classe ao body para o CSS inverter os placares
+    // Adiciona a classe ao body para o CSS inverter os placares conforme o lado
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
@@ -409,18 +404,25 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     if (modoJogo === 'online') {
         // 4. SALVAMENTO NO FIREBASE
-        set(ref(db, `partida_unica/jogadores/${ladoEscolhido}`), true);
-        set(ref(db, `partida_unica/nomes/${ladoEscolhido}`), nomeDigitado);
-        
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO (onDisconnect)
-        // Remove o status de online se o jogador fechar a aba
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
-        // Usamos a função importada do Firebase no topo do arquivo
+        const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
+        const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
+
+        set(playerStatusRef, true);
+        set(playerNameRef, nomeDigitado);
+        
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO AUTOMÁTICA (onDisconnect)
+        // Isso remove os dados do Firebase se o jogador fechar a aba ou perder a conexão
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+            // Limpa o status de ocupado
             pkg.onDisconnect(playerStatusRef).remove();
+            // Limpa o nome (Isso dispara o alerta "Jogador saiu" para o oponente)
+            pkg.onDisconnect(playerNameRef).remove();
+            // Opcional: Limpa a foto também para não pesar o banco
+            pkg.onDisconnect(playerPhotoRef).remove();
         });
 
-        // Opcional: Se for o primeiro a entrar, pode resetar o tabuleiro
+        // Se for o primeiro a entrar na sala vazia, reinicia o tabuleiro
         onValue(gameRef, (snap) => {
             if (!snap.exists()) reiniciar();
         }, { onlyOnce: true });
@@ -433,18 +435,57 @@ window.confirmarCadastro = (ladoEscolhido) => {
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL
+    // 7. FINALIZAÇÃO VISUAL E FECHAMENTO DE MODAIS
     document.getElementById('modal-cadastro').style.display = 'none';
     
-    // Esconde o container de seleção de lado se ele existir
     const selecaoLado = document.getElementById('selecao-lado-container');
     if (selecaoLado) selecaoLado.style.display = 'none';
 
-    // Redesenha o tabuleiro (já com a lógica de inversão de peças se for preto)
+    // Redesenha o tabuleiro (aplica a inversão se for preto)
     desenhar();
     
-    console.log(`Cadastro confirmado como ${meuLado}. Visão invertida: ${meuLado === 'preto'}`);
+    console.log(`Cadastro confirmado: ${nomeDigitado} jogando de ${meuLado}`);
 };
+
+
+// Variável para rastrear quem estava na sala antes
+let nomesAnteriores = {};
+
+onValue(ref(db, 'partida_unica/nomes'), (snap) => {
+    if (modoJogo !== 'online') return;
+    
+    const nomesAtuais = snap.val() || {};
+
+    // VERIFICA QUEM SAIU:
+    // Se o nome existia antes mas não existe mais nos dados atuais
+    Object.keys(nomesAnteriores).forEach(lado => {
+        if (nomesAnteriores[lado] && !nomesAtuais[lado]) {
+            const nomeQueSaiu = nomesAnteriores[lado];
+            exibirAlertaSaida(nomeQueSaiu);
+        }
+    });
+
+    // Atualiza a lista para a próxima comparação
+    nomesAnteriores = { ...nomesAtuais };
+});
+
+function exibirAlertaSaida(nome) {
+    const alerta = document.createElement('div');
+    alerta.className = 'feedback-saida'; // Vamos criar o CSS para isso
+    alerta.innerHTML = `<span>⚠️</span> O jogador <b>${nome}</b> saiu da sala!`;
+    
+    document.body.appendChild(alerta);
+
+    // Remove o alerta após 4 segundos
+    setTimeout(() => {
+        alerta.style.opacity = '0';
+        alerta.style.transform = 'translateY(-20px)';
+        setTimeout(() => alerta.remove(), 500);
+    }, 4000);
+
+    // Opcional: Pausar o jogo ou avisar que o oponente saiu
+    jogoIniciado = false;
+}
 
 window.validarCliqueAvatar = (ladoClicado) => {
     // Se estiver no modo Online
@@ -613,34 +654,6 @@ function atualizarUI() {
     document.getElementById('box-preto').classList.toggle('turno-ativo-preto', turno === 2);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function clicar(r, c) {
     if (modoJogo === 'online') {
         const meuLadoNormalizado = meuLado ? meuLado.toLowerCase() : "";
@@ -687,22 +700,6 @@ function clicar(r, c) {
         validarEMover(r, c);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
