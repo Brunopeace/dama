@@ -909,9 +909,9 @@ async function jogadaDaIA() {
     const idPlacar = (turnoIA === 1) ? 'box-vermelho' : 'box-preto';
     const placarIA = document.getElementById(idPlacar);
     const labelStatus = placarIA.querySelector('.count-label');
-    const statusOriginal = "Capturas"; // Ou o texto padrão que você usa
+    const statusOriginal = "Vermelho"; // Ou o texto padrão que você usa
 
-    labelStatus.innerText = "IA pensando...";
+    labelStatus.innerText = "Maquina pensando...";
 
     await new Promise(r => setTimeout(r, 1200));
 
