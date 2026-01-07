@@ -113,7 +113,7 @@ function notificarEntrada(lado) {
     // Remove automaticamente após 3 segundos
     setTimeout(() => {
         alerta.style.opacity = '0';
-        setTimeout(() => alerta.remove(), 500);
+        setTimeout(() => alerta.remove(), 1000);
     }, 3000);
 }
 
@@ -497,7 +497,7 @@ function exibirAlertaSaida(nome) {
     setTimeout(() => {
         alerta.style.opacity = '0';
         alerta.style.transform = 'translateY(-20px)';
-        setTimeout(() => alerta.remove(), 500);
+        setTimeout(() => alerta.remove(), 1000);
     }, 4000);
 
     // Opcional: Pausar o jogo ou avisar que o oponente saiu
