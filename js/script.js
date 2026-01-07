@@ -628,40 +628,49 @@ function atualizarUI() {
 
 
 
-function clicar(r, c) {
-    // 1. BLOQUEIO DE TURNO ONLINE
-    if (modoJogo === 'online') {
-        // Normalizamos para evitar erros de "Preto" vs "preto"
-        const ladoAtual = meuLado ? meuLado.toLowerCase() : "";
-        const meuTurnoID = (ladoAtual === 'vermelho' ? 1 : 2);
-        
-        // LOG DE DEPURAÇÃO (Aparece no F12 se houver erro)
-        console.log(`Lado: ${ladoAtual} | Turno: ${turno} | MeuID: ${meuTurnoID}`);
 
+
+
+
+
+
+
+
+
+
+
+
+
+function clicar(r, c) {
+    if (modoJogo === 'online') {
+        const meuLadoNormalizado = meuLado ? meuLado.toLowerCase() : "";
+        const meuTurnoID = (meuLadoNormalizado === 'vermelho' ? 1 : 2);
+        
+        // Bloqueio de Turno
         if (turno !== meuTurnoID) {
-            // Se for a vez do outro, não faz nada
+            console.log("Não é sua vez! Turno no Firebase:", turno);
             return;
         }
         
-        // Se o oponente não entrou ou o Firebase não atualizou jogoIniciado
+        // Trava de Jogo Iniciado
         if (!jogoIniciado) {
-            console.warn("Aguardando oponente ou sincronização...");
+            console.warn("Aguardando oponente...");
             return;
         }
     }
 
     const valor = mapa[r][c];
     
-    // 2. LÓGICA DE MOVIMENTOS POSSÍVEIS
-    const todasAsJogadas = obterTodosMvs(mapa, turno);
-    const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
+    // --- CORREÇÃO DA LÓGICA DE SELEÇÃO ---
+    // Se turno é 1 (Ímpar), procura peças 1 ou 3 (Ímpares)
+    // Se turno é 2 (Par), procura peças 2 ou 4 (Pares)
+    const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
+    const ehVezDoPreto = (turno === 2 && (valor === 2 || valor === 4));
 
-    // 3. SELEÇÃO DE PEÇA (Se clicou em uma peça própria)
-    // Para turno 1 (Vermelho): 1%2=1, 3%2=1. Para turno 2 (Preto): 2%2=0, 4%2=0.
-    const ehMinhaPeca = (valor !== 0 && valor % 2 === turno % 2);
+    if (ehVezDoVermelho || ehVezDoPreto) {
+        const todasAsJogadas = obterTodosMvs(mapa, turno);
+        const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-    if (ehMinhaPeca) {
-        // Regra de Captura Obrigatória
         if (capturasObrigatorias.length > 0) {
             const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
             if (!estaPecaPodeComer) {
@@ -671,16 +680,13 @@ function clicar(r, c) {
         }
 
         selecionada = { r, c };
-        desenhar(); // Mostra a borda amarela na peça
+        desenhar(); 
+        console.log("Peça selecionada:", selecionada);
     } 
-
-    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em casa vazia)
     else if (selecionada && valor === 0) {
         validarEMover(r, c);
-        // validarEMover já sincroniza com Firebase e redesenha
     }
 }
-
 
 
 
