@@ -47,6 +47,7 @@ body.visao-preto .centro {
     order: 2;
 }
 
+/* FEEDBACK DE ENTRADA */
 .feedback-entrada {
     position: fixed;
     bottom: 20px;
@@ -59,12 +60,14 @@ body.visao-preto .centro {
     border: 1px solid #ffce00;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     z-index: 11000;
-    animation: subirEntrada 2.0s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transition: opacity 0.5s;
     font-size: 14px;
     display: flex;
     align-items: center;
     gap: 10px;
+    /* Animação de entrada rápida (0.5s) */
+    animation: subirEntrada 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    /* Transição suave para quando mudarmos a opacidade no JS */
+    transition: opacity 1s ease, transform 1s ease;
 }
 
 @keyframes subirEntrada {
@@ -72,34 +75,31 @@ body.visao-preto .centro {
     to { transform: translate(-50%, 0); opacity: 1; }
 }
 
-/* Estilo unificado para avisos de entrada e saída */
+/* FEEDBACK DE SAÍDA */
 .feedback-saida {
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.8); /* Fundo escuro elegante */
+    background: rgba(0, 0, 0, 0.9);
     color: white;
-    padding: 10px 20px;
-    border-radius: 30px;
+    padding: 12px 25px;
+    border-radius: 50px;
+    border: 1px solid #ff5f6d;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    z-index: 11000;
     font-size: 14px;
-    z-index: 10000;
     display: flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    pointer-events: none;
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    animation: feedbackAparecer 3.0s ease-out forwards;
+    gap: 10px;
+    /* Animação de entrada rápida (0.5s) */
+    animation: descerSaida 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    /* Transição suave para o sumiço */
+    transition: opacity 1s ease, transform 1s ease;
 }
 
-/* Cor específica para o alerta de saída (opcional: manter vermelho ou deixar igual) */
-.feedback-saida {
-    border: 1px solid #ff5f6d; /* Uma borda fina vermelha para indicar alerta */
-}
-
-@keyframes feedbackAparecer {
-    from { transform: translate(-50%, -20px); opacity: 0; }
+@keyframes descerSaida {
+    from { transform: translate(-50%, -50px); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }
 }
 
