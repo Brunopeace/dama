@@ -12,44 +12,69 @@ const firebaseConfig = {
     appId: "1:210757872906:web:6df8f84418976330dcdef3"
 };
 
+// --- CONFIGURAÇÃO FIREBASE ---
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
+// 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
-
-// --- MONITOR DE NOMES DOS JOGADORES ---
 const nomesRef = ref(db, 'partida_unica/nomes');
+const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
 
+// 2. SEGUNDO: Configurar os "Ouvintes" (onValue)
+
+// Monitor de nomes (Sincroniza Bruno e Lucas no placar)
 onValue(nomesRef, (snap) => {
     if (modoJogo !== 'online') return;
     const nomes = snap.val() || {};
-    
-    // Atualiza o nome do Vermelho se houver no Firebase
-    if (nomes.vermelho) {
-        document.getElementById('input-nome-v').value = nomes.vermelho;
-    }
-    
-    // Atualiza o nome do Preto se houver no Firebase
-    if (nomes.preto) {
-        document.getElementById('input-nome-p').value = nomes.preto;
-    }
+    if (nomes.vermelho) document.getElementById('input-nome-v').value = nomes.vermelho;
+    if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-
-
-// --- MONITOR DE OCUPAÇÃO DE LADOS ---
-const playersRef = ref(db, 'partida_unica/jogadores');
-
+// Monitor de ocupação (Bloqueia botões de cores já escolhidas)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
     const jogadores = snap.val() || {};
     
-    // IDs dos botões que devem estar no seu HTML
     const btnV = document.getElementById('btn-escolher-vermelho');
     const btnP = document.getElementById('btn-escolher-preto');
     
-    if (btnV) btnV.style.display = jogadores.vermelho ? 'none' : 'inline-block';
-    if (btnP) btnP.style.display = jogadores.preto ? 'none' : 'inline-block';
+    if (btnV) {
+        if (jogadores.vermelho) {
+            btnV.disabled = true;
+            btnV.style.display = 'none'; // Se quiser esconder completamente
+        } else {
+            btnV.disabled = false;
+            btnV.style.display = 'inline-block';
+            btnV.innerText = "Jogar com Vermelhas";
+        }
+    }
+
+    if (btnP) {
+        if (jogadores.preto) {
+            btnP.disabled = true;
+            btnP.style.display = 'none';
+        } else {
+            btnP.disabled = false;
+            btnP.style.display = 'inline-block';
+            btnP.innerText = "Jogar com Pretas";
+        }
+    }
+});
+
+// Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
+onValue(gameRef, (snapshot) => {
+    if (modoJogo !== 'online') return;
+    const data = snapshot.val();
+    if (data && data.mapa) {
+        mapa = data.mapa;
+        turno = data.turno;
+        capturasV = data.capturasV;
+        capturasP = data.capturasP;
+        desenhar();
+        atualizarUI();
+    }
 });
 
 // --- VARIÁVEIS GLOBAIS ---
@@ -176,17 +201,6 @@ window.carregarFoto = function(event, imgId, iconId) {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
 window.alterarNome = function(lado) {
     // Só permite alterar o próprio nome no modo online
     const ladoLongo = lado === 'v' ? 'vermelho' : 'preto';
@@ -252,88 +266,39 @@ window.setModo = (modo) => {
     document.getElementById('selecao-lado-container').style.display = 'block';
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 window.confirmarCadastro = (ladoEscolhido) => {
-    // 1. Captura o elemento e o valor do nome
     const nomeInput = document.getElementById('modal-input-nome');
-    const nomeDigitado = nomeInput ? nomeInput.value.trim() : "";
-    
-    // --- VALIDAÇÃO DE OBRIGATORIEDADE ---
-    if (nomeDigitado === "") {
-        // Feedback visual de erro
-        nomeInput.style.border = "2px solid #ff5f6d";
-        nomeInput.placeholder = "NOME OBRIGATÓRIO!";
-        
-        // Efeito de tremor no input para chamar atenção
-        nomeInput.classList.add('shake-placar'); 
-        setTimeout(() => {
-            nomeInput.classList.remove('shake-placar');
-            nomeInput.style.border = "none";
-        }, 500);
+    const nomeDigitado = nomeInput.value.trim();
 
-        return; // Para a execução aqui e não deixa o jogador entrar
+    if (nomeDigitado === "") {
+        alert("Por favor, digite seu nome!");
+        return;
     }
 
-    // 2. Se passou na validação, define o lado
     meuLado = ladoEscolhido;
 
-    // Aplica o nome no campo correto do placar
-    const inputIdMeuLado = meuLado === 'vermelho' ? 'input-nome-v' : 'input-nome-p';
-    document.getElementById(inputIdMeuLado).value = nomeDigitado;
-
-    // 3. Esconde a interface de seleção
-    document.getElementById('modal-cadastro').style.display = 'none';
-
-    // 4. Lógica por modo de jogo
     if (modoJogo === 'online') {
-        // Modo Online: Salva ocupação e nome no Firebase
+        // 1. Salva no Firebase imediatamente
         set(ref(db, `partida_unica/jogadores/${ladoEscolhido}`), true);
         set(ref(db, `partida_unica/nomes/${ladoEscolhido}`), nomeDigitado);
         
-        if (!mapa || mapa.length === 0) reiniciar(); 
-        else window.salvarNoFirebase();
+        // 2. Esconde o seletor
+        document.getElementById('modal-cadastro').style.display = 'none';
+        document.getElementById('selecao-lado-container').style.display = 'none';
+
+        // Se for o primeiro a entrar, reinicia o tabuleiro
+        onValue(gameRef, (snap) => {
+            if (!snap.exists()) reiniciar();
+        }, { onlyOnce: true });
+
     } else {
-        // Modo IA: Configura nome da Máquina
-        const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
-        const inputIdIA = `input-nome-${ladoIA}`;
-        document.getElementById(inputIdIA).value = "Máquina 🤖";
-        document.getElementById(inputIdIA).disabled = true;
-
+        // Lógica da IA (Máquina)
+        document.getElementById('input-nome-' + (meuLado === 'vermelho' ? 'p' : 'v')).value = "Máquina 🤖";
+        document.getElementById('modal-cadastro').style.display = 'none';
         reiniciar();
-        if (meuLado === 'preto') setTimeout(() => jogadaDaIA(), 600);
     }
-
     desenhar();
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 window.validarCliqueAvatar = (ladoClicado) => {
     // Se estiver no modo Online
@@ -469,8 +434,6 @@ function clicar(r, c) {
     
     desenhar();
 }
-
-
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
@@ -653,16 +616,6 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
         }, 200);
     }, 820); // 820ms para casar com a transição de 0.8s
 }
-
-
-
-
-
-
-
-
-
-
 
 // --- IA AVANÇADA COM RECURSIVIDADE E REGRA DA MAIORIA ---
 async function jogadaDaIA() {
