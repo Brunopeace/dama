@@ -174,6 +174,7 @@ onValue(gameRef, (snapshot) => {
 
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
+let temporizadoresSaida = {};
 let jogadoresAntigos = {};
 let nomesAnteriores = {};
 let modoJogo = 'online'; 
@@ -449,42 +450,82 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 };
 
+// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
 onValue(ref(db, 'partida_unica/nomes'), (snap) => {
     if (modoJogo !== 'online') return;
     
     const nomesAtuais = snap.val() || {};
 
-    // VERIFICA QUEM SAIU:
+    // --- VERIFICA QUEM SAIU (com atraso para evitar falsos positivos) ---
     Object.keys(nomesAnteriores).forEach(lado => {
-        // SÓ dispara o alerta se:
-        // 1. O nome existia e agora sumiu (nomesAtuais[lado] é nulo)
-        // 2. O lado que sumiu NÃO é o meu próprio lado
+        // Se o nome existia e agora sumiu, e NÃO é o meu próprio lado
         if (nomesAnteriores[lado] && !nomesAtuais[lado] && lado !== meuLado) {
-            const nomeQueSaiu = nomesAnteriores[lado];
-            exibirAlertaSaida(nomeQueSaiu);
-            
-            // Opcional: Para o jogo já que o oponente saiu
-            jogoIniciado = false;
+            const nomeQueSumiu = nomesAnteriores[lado];
+            const ladoQueSumiu = lado;
+
+            // Se já houver um temporizador para este lado, limpa antes de criar outro
+            if (temporizadoresSaida[ladoQueSumiu]) clearTimeout(temporizadoresSaida[ladoQueSumiu]);
+
+            // Aguarda 2 segundos antes de disparar o alerta
+            temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
+                exibirAlertaSaida(nomeQueSumiu);
+                
+                // Para o jogo e limpa o placar do oponente que saiu
+                jogoIniciado = false;
+                const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+                const campo = document.getElementById(idCampoOponente);
+                if (campo) campo.value = "Aguardando...";
+                
+                delete temporizadoresSaida[ladoQueSumiu];
+            }, 2000); 
         }
     });
 
-    // Atualiza a lista para a próxima comparação
+    // --- VERIFICA QUEM VOLTOU (Reconexão rápida ou troca de turno) ---
+    Object.keys(nomesAtuais).forEach(lado => {
+        // Se o nome reapareceu antes dos 2 segundos, cancela o alerta de saída
+        if (temporizadoresSaida[lado]) {
+            clearTimeout(temporizadoresSaida[lado]);
+            delete temporizadoresSaida[lado];
+            console.log(`Jogador ${nomesAtuais[lado]} estabilizou conexão.`);
+        }
+
+        // Atualiza os nomes nos inputs do placar em tempo real
+        const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+        const campo = document.getElementById(idCampo);
+        if (campo && nomesAtuais[lado]) {
+            campo.value = nomesAtuais[lado];
+        }
+    });
+
+    // Atualiza a lista de referência para a próxima comparação
     nomesAnteriores = { ...nomesAtuais };
-    
-    // Sincroniza os nomes nos inputs do placar para ambos
-    if (nomesAtuais.vermelho) document.getElementById('input-nome-v').value = nomesAtuais.vermelho;
-    if (nomesAtuais.preto) document.getElementById('input-nome-p').value = nomesAtuais.preto;
 });
 
-
+// 2. MONITOR DE CONEXÃO GLOBAL
 const connectedRef = ref(db, ".info/connected");
 onValue(connectedRef, (snap) => {
-  if (snap.val() === true) {
-    console.log("Conectado ao Firebase");
-  } else {
-    console.warn("Conexão perdida temporariamente...");
-  }
+    if (snap.val() === true) {
+        console.log("🟢 Conectado ao servidor de jogo");
+    } else {
+        console.warn("🟡 Conexão com o servidor oscilando...");
+    }
 });
+
+// 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
+function exibirAlertaSaida(nome) {
+    const alerta = document.createElement('div');
+    alerta.className = 'feedback-saida';
+    alerta.innerHTML = `<span>👋</span> Jogador <b>${nome}</b> saiu da sala!`;
+    document.body.appendChild(alerta);
+
+    // Fica visível por 3 segundos
+    setTimeout(() => {
+        alerta.style.opacity = '0';
+        alerta.style.transform = 'translate(-50%, -20px)';
+        setTimeout(() => alerta.remove(), 1000); // Tempo da transição CSS
+    }, 3000);
+}
 
 function exibirAlertaSaida(nome) {
     const alerta = document.createElement('div');
