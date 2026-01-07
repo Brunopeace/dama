@@ -391,28 +391,59 @@ window.confirmarCadastro = (ladoEscolhido) => {
         return;
     }
 
-    // --- LINHA ESSENCIAL: Atualiza a variável global ---
+    // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido; 
 
+    // 2. INVERSÃO VISUAL DA INTERFACE
+    // Adiciona a classe ao body para o CSS inverter os placares
+    if (meuLado === 'preto') {
+        document.body.classList.add('visao-preto');
+    } else {
+        document.body.classList.remove('visao-preto');
+    }
+
+    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
-    document.getElementById(idMeuInput).value = nomeDigitado;
+    const campoNome = document.getElementById(idMeuInput);
+    if (campoNome) campoNome.value = nomeDigitado;
 
     if (modoJogo === 'online') {
+        // 4. SALVAMENTO NO FIREBASE
         set(ref(db, `partida_unica/jogadores/${ladoEscolhido}`), true);
         set(ref(db, `partida_unica/nomes/${ladoEscolhido}`), nomeDigitado);
         
-        // Adicione o onDisconnect aqui para limpar a sala se o Carlos sair
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO (onDisconnect)
+        // Remove o status de online se o jogador fechar a aba
+        const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
+        // Usamos a função importada do Firebase no topo do arquivo
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-            pkg.onDisconnect(ref(db, `partida_unica/jogadores/${ladoEscolhido}`)).remove();
+            pkg.onDisconnect(playerStatusRef).remove();
         });
+
+        // Opcional: Se for o primeiro a entrar, pode resetar o tabuleiro
+        onValue(gameRef, (snap) => {
+            if (!snap.exists()) reiniciar();
+        }, { onlyOnce: true });
+
     } else {
+        // 6. MODO IA (OFFLINE)
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
-        document.getElementById('input-nome-' + ladoIA).value = "Máquina 🤖";
+        const campoIA = document.getElementById('input-nome-' + ladoIA);
+        if (campoIA) campoIA.value = "Máquina 🤖";
         reiniciar();
     }
 
+    // 7. FINALIZAÇÃO VISUAL
     document.getElementById('modal-cadastro').style.display = 'none';
+    
+    // Esconde o container de seleção de lado se ele existir
+    const selecaoLado = document.getElementById('selecao-lado-container');
+    if (selecaoLado) selecaoLado.style.display = 'none';
+
+    // Redesenha o tabuleiro (já com a lógica de inversão de peças se for preto)
     desenhar();
+    
+    console.log(`Cadastro confirmado como ${meuLado}. Visão invertida: ${meuLado === 'preto'}`);
 };
 
 window.validarCliqueAvatar = (ladoClicado) => {
