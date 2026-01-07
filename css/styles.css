@@ -1,0 +1,542 @@
+/* RESET E CONFIGURAÇÕES GERAIS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background-color: #121212;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+
+
+
+
+
+
+/* CONTAINER DO BOTÃO PWA - FIXO NA LATERAL DIREITA */
+#pwa-install-container {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10001; /* Fica acima de quase tudo */
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* BOTÃO DE INSTALAÇÃO HORIZONTAL ESTILO ABA */
+.btn-pwa {
+    background: rgba(20, 20, 20, 0.9); /* Fundo sólido para leitura */
+    border: 2px solid #ffce00;
+    border-right: none; /* Remove a borda encostada na tela */
+    color: #ffce00;
+    padding: 12px 18px;
+    border-radius: 30px 0 0 30px; /* Arredondado só no lado esquerdo */
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    backdrop-filter: blur(10px);
+    box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.5);
+    white-space: nowrap; /* Garante que o texto fique em uma linha só */
+}
+
+/* EFEITO AO PASSAR O MOUSE OU TOCAR */
+.btn-pwa:hover {
+    background: #ffce00;
+    color: #000;
+    padding-right: 30px; /* Dá a sensação de que o botão "saiu" mais da borda */
+}
+
+.btn-pwa:active {
+    transform: scale(0.95);
+}
+
+.btn-pwa .icon {
+    font-size: 20px;
+}
+
+/* ANIMAÇÃO DE PULSAÇÃO (Sutil na lateral) */
+@keyframes pulse-pwa {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(-5px); } /* O botão dá uma "espiadinha" para a esquerda */
+    100% { transform: translateX(0); }
+}
+
+#pwa-install-container {
+    animation: pulse-pwa 2s infinite ease-in-out;
+}
+
+/* AJUSTE PARA O S23 FE NÃO CORTAR O TABULEIRO */
+@media (max-width: 500px) {
+    .btn-pwa {
+        padding: 10px 14px;
+        font-size: 12px;
+        opacity: 0.9; /* Um pouco mais transparente para não distrair */
+    }
+}
+
+/*Nome da maquina*/
+
+.input-nome:disabled {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    cursor: default;
+}
+
+
+
+
+
+
+.peca-voadora {
+    position: fixed;
+    z-index: 10000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    /* Transições diferentes para cada eixo cria o efeito de curva (parábola) */
+    transition: left 0.8s linear, 
+                top 0.8s cubic-bezier(0.3, -0.5, 0.7, 1.5), 
+                transform 0.8s ease-in-out, 
+                opacity 0.8s ease-in;
+    background-size: cover;
+    background-position: center;
+}
+
+.peca-voadora.peca-vermelha {
+    background: radial-gradient(circle at 35% 35%, #ff5f6d, #b91d1d);
+    border: 2px solid #fff;
+}
+
+.peca-voadora.peca-preta {
+    background: radial-gradient(circle at 35% 35%, #4a4a4a, #000);
+    border: 2px solid #666;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ESTILO DO INPUT DE NOME NO MODAL */
+#modal-input-nome {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    background: #333;
+    border: 2px solid #444;
+    border-radius: 8px;
+    color: white;
+    text-align: center;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#modal-input-nome:focus {
+    border-color: #ffce00; /* Brilha em amarelo ao clicar */
+    background: #3a3a3a;
+}
+
+#modal-input-nome::placeholder {
+    color: #888;
+}
+
+/* PLACAR E CONTAINERS DE INFO */
+.placar-container {
+    width: 100%;
+    max-width: 450px;
+    margin: 10px 0;
+}
+
+.count-box {
+    background: #1e1e1e;
+    padding: 15px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 3px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* INDICADORES DE TURNO ATIVO */
+.turno-ativo-vermelho {
+    border-color: #ff5f6d;
+    box-shadow: 0 0 15px rgba(255, 95, 109, 0.4);
+    background: #251a1a;
+}
+
+.turno-ativo-preto {
+    border-color: #ffce00;
+    box-shadow: 0 0 15px rgba(255, 206, 0, 0.4);
+    background: #25251a;
+}
+
+.badge-vez {
+    position: absolute;
+    top: -10px;
+    left: 15px;
+    background: #ffce00;
+    color: black;
+    padding: 2px 10px;
+    border-radius: 5px;
+    font-size: 10px;
+    font-weight: bold;
+    display: none;
+}
+
+.turno-ativo-vermelho .badge-vez,
+.turno-ativo-preto .badge-vez {
+    display: block;
+}
+
+/* AVATAR E NOMES */
+.info-jogador {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar-upload {
+    width: 45px;
+    height: 45px;
+    background: #333;
+    border-radius: 50%; /* Faz o container ser um círculo */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;    /* Corta a imagem para ficar redonda */
+    cursor: pointer;
+    border: 2px solid #444;
+    position: relative;
+}
+
+.avatar-upload img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;   /* Faz a foto preencher o círculo sem esticar */
+    border-radius: 50%;  /* Garante o arredondamento da imagem */
+    display: none;       /* Começa escondida */
+}
+
+.avatar-upload span {
+    font-size: 18px;
+    color: #888;
+    position: absolute;
+}
+
+/* CONTAINER DA PONTUAÇÃO (LADO DIREITO DO CARD) */
+.pontuacao {
+    text-align: right; /* Alinha o texto à direita */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* TEXTO: "PRETO COMEU" / "VERMELHO COMEU" */
+.count-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888; /* Cor padrão cinza, será sobrescrita pelo style inline no HTML se necessário */
+    margin-bottom: 2px;
+    font-weight: bold;
+}
+
+/* O NÚMERO DA PONTUAÇÃO */
+.count {
+    font-size: 28px;
+    font-weight: 900;
+    color: white; /* Cor padrão */
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ESTILO ESPECÍFICO PARA AS CAPTURAS (OPCIONAL, JÁ QUE VOCÊ USA STYLE INLINE) */
+#capturas-p {
+    color: #ffffff; /* Branco para o Preto */
+}
+
+#capturas-v {
+    color: #ff5f6d; /* Vermelho para o Vermelho */
+}
+
+
+.input-nome {
+    background: transparent;
+    border: none;
+    color: white;
+    font-weight: bold;
+    width: 100px;
+    outline: none;
+}
+
+/* TABULEIRO */
+#tabuleiro {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    width: 92vw;
+    height: 92vw;
+    max-width: 450px;
+    max-height: 450px;
+    border: 5px solid #333;
+    border-radius: 5px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.casa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+.branca {
+    background: #f0d9b5;
+    }
+    
+.preta {
+    background: #b58863;
+    }
+
+/* PEÇAS */
+.peca {
+    width: 82%;
+    height: 82%;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.peca-vermelha { background: radial-gradient(circle at 30% 30%, #ff5f6d, #8b0000); }
+.peca-preta { background: radial-gradient(circle at 30% 30%, #555, #000); }
+
+.peca.selecionada {
+    transform: scale(1.15);
+    border: 3px solid #ffce00;
+    box-shadow: 0 0 15px #ffce00;
+}
+
+.dama::after {
+    content: '👑';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.4rem;
+    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
+}
+
+/* MODAIS E TELAS DE SOBREPOSIÇÃO */
+.modal-overlay, #tela-vitoria, .emoji-picker-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.emoji-picker-overlay.active {
+    display: flex !important; /* O !important garante que o display: none seja sobrescrito */
+}
+
+.modal-overlay {
+    background: rgba(0,0,0,0.95);
+}
+
+#tela-vitoria {
+    background: rgba(0,0,0,0.9);
+    display: none;
+    }
+    
+.emoji-picker-overlay {
+    background: rgba(0,0,0,0.6); 
+    display: none;
+    }
+
+.modal-card, .vitoria-card {
+    background: #222;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    width: 320px;
+    border: 2px solid #333;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+
+.vitoria-card { border-color: #ffce00; }
+
+/* BOTÕES */
+.btn-modo, .btn-lado, .btn-novo-jogo {
+    width: 100%;
+    padding: 14px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    text-transform: uppercase;
+}
+
+.btn-modo { background: #333; color: white; }
+.btn-modo.ativo { background: #ffce00; color: black; }
+
+.btn-v { background: #ff5f6d; color: white; }
+.btn-p { background: #444; color: white; border: 1px solid #666; }
+
+.btn-novo-jogo { background: #ffce00; color: black; margin-top: 20px; }
+.btn-novo-jogo:hover { background: #e6b800; transform: scale(1.05); }
+
+/* EMOJIS */
+.emoji-list {
+    background: white;
+    padding: 20px;
+    border-radius: 50px;
+    display: flex;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.emoji-list span {
+    font-size: 40px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.emoji-list span:hover { transform: scale(1.3); }
+
+.float-emoji {
+    position: absolute;
+    top: -50px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 45px;
+    animation: floatUp 2.5s ease-out forwards;
+    pointer-events: none;
+}
+
+/* ANIMAÇÕES */
+@keyframes floatUp {
+    0% { opacity: 0; transform: translate(-50%, 20px); }
+    20% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -100px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+#tela-vitoria.ativo {
+    display: flex;
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* PWA */
+#pwa-install-container {
+    margin-bottom: 10px;
+}
+
+.btn-pwa {
+    background: #222;
+    color: #ffce00;
+    border: 1px solid #ffce00;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* STATUS IA */
+.ia-pensando-status {
+    color: #ffce00;
+    font-size: 12px;
+    animation: pulseIA 1.5s infinite;
+}
+
+@keyframes pulseIA {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+.feedback-erro {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(217, 4, 41, 0.95); /* Vermelho intenso */
+    color: white;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 1000;
+    white-space: nowrap;
+    animation: feedbackAparecer 2.5s forwards;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+@keyframes feedbackAparecer {
+    0% { opacity: 0; transform: translate(-50%, -10%); }
+    15% { opacity: 1; transform: translate(-50%, -50%); }
+    85% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -80%); }
+}
+
+.shake-placar {
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.02) translateX(-4px); }
+    75% { transform: scale(1.02) translateX(4px); }
+}

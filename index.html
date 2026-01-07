@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DAMA PRO</title>
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <div id="pwa-install-container" style="display: none;">
+        <button id="btn-instalar" class="btn-pwa">
+            <span class="icon">📲</span> Instalar App
+        </button>
+    </div>
+
+    <div id="modal-cadastro" class="modal-overlay">
+        <div class="modal-card">
+            <div style="font-size: 40px; margin-bottom: 15px;">🎲</div>
+            <h2>DAMA</h2>
+            
+            <input type="text" id="modal-input-nome" placeholder="Seu nome Aqui" maxlength="12">
+            
+            <div class="selecao-modo">
+                <button onclick="setModo('ia')" id="btn-ia" class="btn-modo">🤖 Contra a Máquina</button>
+                <button onclick="setModo('online')" id="btn-online" class="btn-modo">🌐 Jogar Online</button>
+            </div>
+
+            <div id="selecao-lado-container" style="display: none; margin-top: 20px;">
+                <p>Escolha seu lado:</p>
+                <div class="selecao-lado">
+                    <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="btn-lado btn-v">VERMELHO</button>
+                    <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="btn-lado btn-p">PRETO</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="placar-container">
+        <div id="box-preto" class="count-box">
+            <span class="badge-vez">Sua Vez</span>
+            <div class="info-jogador">
+                <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
+                    <span id="icon-p">📷</span>
+                    <img id="img-preto">
+                    <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
+                </div>
+                <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">
+                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+            </div>
+            <div class="pontuacao">
+                <span class="count-label">Preto </span>
+                <span id="capturas-p" class="count">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="centro">
+        <div id="msg-erro"></div>
+        <div id="tabuleiro"></div>
+    </div>
+
+    <div class="placar-container">
+        <div id="box-vermelho" class="count-box">
+            <span class="badge-vez badge-vermelha">Sua Vez</span>
+            <div class="info-jogador">
+                <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
+                    <span id="icon-v">📷</span>
+                    <img id="img-vermelho">
+                    <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
+                </div>
+                <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" onchange="alterarNome('v')">
+                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>
+            </div>
+            <div class="pontuacao">
+                <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
+                <span id="capturas-v" class="count" style="color: #ff5f6d;">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-emoji-selecao" class="emoji-picker-overlay">
+        <div class="emoji-list">
+            <span onclick="enviarEmoji('😊')">😊</span>
+            <span onclick="enviarEmoji('😂')">😂</span>
+            <span onclick="enviarEmoji('😠')">😠</span>
+            <span onclick="enviarEmoji('😮')">😮</span>
+            <span onclick="enviarEmoji('😎')">😎</span>
+        </div>
+    </div>
+
+    <div id="tela-vitoria">
+        <div class="vitoria-card">
+            <div style="font-size: 50px; margin-bottom: 10px;">🏆</div>
+            <h2 id="vencedor-texto">VITÓRIA!</h2>
+            <p class="vitoria-subtexto">Partida encerrada com sucesso.</p>
+            <button class="btn-novo-jogo" onclick="reiniciar()">JOGAR NOVAMENTE</button>
+        </div>
+    </div>
+
+    <script src="js/script.js" type="module"></script>
+</body>
+</html>
