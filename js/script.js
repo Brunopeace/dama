@@ -900,47 +900,36 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
     }, 820); // 820ms para casar com a transição de 0.8s
 }
 
-// --- IA AVANÇADA COM RECURSIVIDADE E REGRA DA MAIORIA ---
+// --- IA AVANÇADA CORRIGIDA (SEM ERRO DE COMBO) ---
 async function jogadaDaIA() {
-    // Só joga se for o turno da IA (Turno 2 se jogador é 1, ou Turno 1 se jogador é 2)
     const turnoIA = (meuLado === 'vermelho' ? 2 : 1);
     
-    // Bloqueios de segurança
     if (turno !== turnoIA || modoJogo !== 'ia') return;
 
     const idPlacar = (turnoIA === 1) ? 'box-vermelho' : 'box-preto';
     const placarIA = document.getElementById(idPlacar);
-    
-    // Feedback visual de "pensando"
     const labelStatus = placarIA.querySelector('.count-label');
-    const statusOriginal = labelStatus.innerText;
+    const statusOriginal = "Capturas"; // Ou o texto padrão que você usa
+
     labelStatus.innerText = "IA pensando...";
 
-    // Pequena pausa para simular raciocínio
     await new Promise(r => setTimeout(r, 1200));
 
     const mvs = obterTodosMvs(mapa, turno);
     
     if (mvs.length > 0) {
         let jogadaEscolhida;
-
-        // 1. FILTRAR CAPTURAS (Regra de Ouro)
         const capturas = mvs.filter(m => m.cap);
         
         if (capturas.length > 0) {
-            // IA INTELIGENTE: Escolhe a jogada que captura o MAIOR número de peças
             jogadaEscolhida = capturas.reduce((melhor, atual) => {
                 const nCapAtual = atual.totalCapturas || 1;
                 const nCapMelhor = melhor.totalCapturas || 1;
                 return (nCapAtual > nCapMelhor) ? atual : melhor;
             }, capturas[0]);
         } else {
-            // 2. MOVIMENTO ESTRATÉGICO (Se não houver captura)
             const jogadasSeguras = mvs.filter(m => !verificarSeSeraCapturada(m.para.r, m.para.c));
-            
             if (jogadasSeguras.length > 0) {
-                // Se for a vez da IA Vermelha (ID 1), ela quer diminuir o R (avançar para baixo)
-                // Se for a IA Preta (ID 2), ela quer aumentar o R (avançar para cima)
                 if (turnoIA === 1) {
                     jogadaEscolhida = jogadasSeguras.sort((a, b) => a.para.r - b.para.r)[0];
                 } else {
@@ -951,21 +940,30 @@ async function jogadaDaIA() {
             }
         }
 
-        // 3. EXECUÇÃO DO MOVIMENTO
         if (jogadaEscolhida) {
+            const rDestino = jogadaEscolhida.para.r;
+            const cDestino = jogadaEscolhida.para.c;
+            
             selecionada = jogadaEscolhida.de;
-            validarEMover(jogadaEscolhida.para.r, jogadaEscolhida.para.c);
+            validarEMover(rDestino, cDestino);
             desenhar();
-        }
 
-        // 4. LÓGICA DE MULTI-CAPTURA (COMBO)
-        if (turno === turnoIA) {
-            labelStatus.innerText = "Continuando combo...";
-            setTimeout(() => jogadaDaIA(), 800);
-            return; // Retorna para não resetar o texto do placar precocemente
+            // --- LÓGICA DE COMBO CORRIGIDA ---
+            // Verificamos se, após mover, a mesma peça AINDA pode capturar mais alguém
+            const novasJogadas = obterTodosMvs(mapa, turno);
+            const podeContinuarComendo = novasJogadas.some(m => 
+                m.de.r === rDestino && m.de.c === cDestino && m.cap
+            );
+
+            if (turno === turnoIA && podeContinuarComendo) {
+                labelStatus.innerText = "Continuando combo...";
+                setTimeout(() => jogadaDaIA(), 800);
+                return; // Mantém a função rodando para o combo
+            }
         }
     }
 
+    // Se chegou aqui, a vez da IA acabou de verdade
     labelStatus.innerText = statusOriginal;
 }
 
@@ -976,7 +974,6 @@ function verificarSeSeraCapturada(r, c) {
     const mvsOponente = obterTodosMvs(mapa, oponenteTurno);
     return mvsOponente.some(m => m.cap && m.cap.r === r && m.cap.c === c);
 }
-
 
 function verificarFimDeJogo() {
     let temVermelho = false;
