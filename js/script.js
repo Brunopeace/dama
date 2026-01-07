@@ -386,34 +386,27 @@ window.confirmarCadastro = (ladoEscolhido) => {
         return;
     }
 
-    meuLado = ladoEscolhido;
+    // --- LINHA ESSENCIAL: Atualiza a variável global ---
+    meuLado = ladoEscolhido; 
 
-    // 1. ATUALIZAÇÃO LOCAL: Define seu nome no placar imediatamente (Online ou IA)
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     document.getElementById(idMeuInput).value = nomeDigitado;
 
     if (modoJogo === 'online') {
-        // --- SALVA NO FIREBASE: Apenas se for online ---
         set(ref(db, `partida_unica/jogadores/${ladoEscolhido}`), true);
         set(ref(db, `partida_unica/nomes/${ladoEscolhido}`), nomeDigitado);
         
-        // Configuração da sala online
-        onValue(gameRef, (snap) => {
-            if (!snap.exists()) reiniciar();
-        }, { onlyOnce: true });
-
+        // Adicione o onDisconnect aqui para limpar a sala se o Carlos sair
+        import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+            pkg.onDisconnect(ref(db, `partida_unica/jogadores/${ladoEscolhido}`)).remove();
+        });
     } else {
-        // --- MODO TREINAMENTO (IA): Apenas local ---
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
         document.getElementById('input-nome-' + ladoIA).value = "Máquina 🤖";
         reiniciar();
     }
 
-    // Fecha o modal e inicia visualmente
     document.getElementById('modal-cadastro').style.display = 'none';
-    if(document.getElementById('selecao-lado-container')) {
-        document.getElementById('selecao-lado-container').style.display = 'none';
-    }
     desenhar();
 };
 
@@ -585,15 +578,24 @@ function atualizarUI() {
 }
 
 function clicar(r, c) {
-    // 1. BLOQUEIO DE TURNO: Se for online, impede clique se não for sua vez
+    // 1. BLOQUEIO DE TURNO E PRESENÇA
     if (modoJogo === 'online') {
-        const meuTurnoID = (meuLado === 'vermelho' ? 1 : 2);
-        if (turno !== meuTurnoID) return;
+        // Garantimos que meuLado esteja em minúsculo para evitar erro de comparação
+        const meuLadoNormalizado = meuLado ? meuLado.toLowerCase() : "";
+        const meuTurnoID = (meuLadoNormalizado === 'vermelho' ? 1 : 2);
         
-        // Impede cliques se o oponente ainda não estiver na sala
+        // Se não for a vez do Carlos (Preto/2) no computador dele, bloqueia
+        if (turno !== meuTurnoID) {
+            console.log("Aguarde sua vez! Turno atual:", turno, "Seu ID:", meuTurnoID);
+            return;
+        }
+        
+        // Impede cliques se o oponente ainda não estiver na sala ou tiver saído
         if (!jogoIniciado) {
             if (typeof window.exibirFeedback === 'function') {
                 window.exibirFeedback("Aguardando oponente...", "erro");
+            } else {
+                console.warn("Aguardando oponente para iniciar...");
             }
             return;
         }
@@ -606,6 +608,7 @@ function clicar(r, c) {
     const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
     // 3. SELEÇÃO DE PEÇA (Se clicou em uma peça própria)
+    // valor % 2 === turno % 2 garante que peças 1 e 3 sejam do turno 1, e 2 e 4 do turno 2
     if (valor !== 0 && valor % 2 === turno % 2) {
         
         // Regra de Captura Obrigatória
@@ -613,7 +616,6 @@ function clicar(r, c) {
             const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
             
             if (!estaPecaPodeComer) {
-                // Feedback visual de erro (sacudir o placar/aviso)
                 if (typeof window.mostrarAvisoCaptura === 'function') {
                     window.mostrarAvisoCaptura();
                 }
@@ -621,18 +623,20 @@ function clicar(r, c) {
             }
         }
 
-        // Seleciona a peça e redesenha para mostrar o destaque (borda amarela)
+        // Seleciona a peça localmente
         selecionada = { r, c };
+        
+        // Redesenha para aplicar a borda amarela (.selecionada)
         desenhar(); 
     } 
 
-    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em casa vazia)
+    // 4. MOVIMENTAÇÃO (Se já tem peça selecionada e clicou em uma casa vazia)
     else if (selecionada && valor === 0) {
-        // Tenta mover para o destino clicado
+        // Tenta executar o movimento
         validarEMover(r, c);
         
-        // NOTA: Não colocamos desenhar() aqui porque o validarEMover já faz 
-        // o desenho final e sincroniza com o Firebase após a jogada.
+        // Importante: No modo online, o validarEMover já contém o desenhar() 
+        // e o salvarNoFirebase(), então não precisamos de nada extra aqui.
     }
 }
 
@@ -986,12 +990,22 @@ function obterTodosMvs(m, j) {
 
 onValue(gameRef, (snap) => {
     if (modoJogo !== 'online') return;
+    
+    // TRAVA: Se eu estou decidindo um movimento (selecionada != null), 
+    // ignore atualizações externas para não resetar meu clique.
+    if (selecionada !== null) return;
+
     const d = snap.val();
     if (d && d.mapa) {
-        mapa = d.mapa; turno = d.turno;
-        capturasV = d.capturasV; capturasP = d.capturasP;
+        mapa = d.mapa; 
+        turno = d.turno;
+        capturasV = d.capturasV; 
+        capturasP = d.capturasP;
+        
         desenhar();
+        if (typeof atualizarUI === 'function') atualizarUI();
     }
 });
+
 
 reiniciar();
