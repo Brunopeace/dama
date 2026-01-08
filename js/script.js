@@ -33,7 +33,7 @@ onValue(emojiRef, (snap) => {
     }
 });
 
-// Monitor de nomes (Sincroniza Bruno e Lucas no placar)
+// Monitor de nomes
 onValue(nomesRef, (snap) => {
     // Se não estiver online, ignore atualizações de nomes vindas da nuvem
     if (modoJogo !== 'online') return;
@@ -175,6 +175,7 @@ onValue(gameRef, (snapshot) => {
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
 let partidaConfirmada = false;
+let monitoresIniciados = false;
 let temporizadoresSaida = {};
 let jogadoresAntigos = {};
 let nomesAnteriores = {};
@@ -377,13 +378,19 @@ window.selecionarModoCard = (modo) => {
     if (cardAtivo) cardAtivo.classList.add('selected');
 
     // --- ATIVAÇÃO DO MONITORAMENTO SE FOR ONLINE ---
-    // Isso evita que o código tente ler o Firebase antes da hora ou no modo IA
-    if (modo === 'online') {
-        console.log("Modo Online selecionado. Ativando monitoramento...");
-        if (typeof iniciarMonitoramentoOnline === 'function') {
-            iniciarMonitoramentoOnline();
-        }
+// Isso evita que o código tente ler o Firebase antes da hora ou no modo IA
+if (modo === 'online') {
+    console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
+
+    if (typeof iniciarMonitoramentoOnline === 'function') {
+        iniciarMonitoramentoOnline();
     }
+
+    if (typeof iniciarMonitoramentoFotos === 'function') {
+        iniciarMonitoramentoFotos();
+    }
+    monitoresIniciados = true;
+}
 
     // Mostra a escolha de lados com animação
     const sideSelection = document.getElementById('side-selection');
@@ -470,11 +477,41 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 };
 
+function iniciarMonitoramentoFotos() {
+    if (modoJogo !== 'online') return;
+
+    onValue(ref(db, 'partida_unica/fotos'), (snap) => {
+        const fotos = snap.val() || {};
+
+        // 🔴 FOTO DO VERMELHO
+        if (fotos.vermelho) {
+            const imgV = document.getElementById('foto-vermelho');
+            const iconV = document.getElementById('icon-vermelho');
+
+            if (imgV) {
+                imgV.src = fotos.vermelho;
+                imgV.style.display = 'block';
+            }
+            if (iconV) iconV.style.display = 'none';
+        }
+
+        // ⚫ FOTO DO PRETO
+        if (fotos.preto) {
+            const imgP = document.getElementById('foto-preto');
+            const iconP = document.getElementById('icon-preto');
+
+            if (imgP) {
+                imgP.src = fotos.preto;
+                imgP.style.display = 'block';
+            }
+            if (iconP) iconP.style.display = 'none';
+        }
+    });
+}
+
     // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
     function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
-
-    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
         if (modoJogo !== 'online') return;
 
@@ -781,7 +818,6 @@ function clicar(r, c) {
 
         selecionada = { r, c };
         desenhar();
-        console.log("Peça selecionada:", selecionada);
         return;
     }
 
@@ -974,79 +1010,153 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
     }, 820); // 820ms para casar com a transição de 0.8s
 }
 
-// --- IA AVANÇADA CORRIGIDA (SEM ERRO DE COMBO) ---
-async function jogadaDaIA() {
-    const turnoIA = (meuLado === 'vermelho' ? 2 : 1);
-    
-    if (turno !== turnoIA || modoJogo !== 'ia') return;
+function avaliarTabuleiro(mapa, turnoIA) {
+    let score = 0;
 
-    const idPlacar = (turnoIA === 1) ? 'box-vermelho' : 'box-preto';
-    const placarIA = document.getElementById(idPlacar);
-    const labelStatus = placarIA.querySelector('.count-label');
-    const statusOriginal = "Vermelho"; // Ou o texto padrão que você usa
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const v = mapa[r][c];
 
-    labelStatus.innerText = "Maquina pensando...";
+            if (v === 0) continue;
 
-    await new Promise(r => setTimeout(r, 1200));
+            const ehIA =
+                (turnoIA === 1 && (v === 1 || v === 3)) ||
+                (turnoIA === 2 && (v === 2 || v === 4));
 
-    const mvs = obterTodosMvs(mapa, turno);
-    
-    if (mvs.length > 0) {
-        let jogadaEscolhida;
-        const capturas = mvs.filter(m => m.cap);
-        
-        if (capturas.length > 0) {
-            jogadaEscolhida = capturas.reduce((melhor, atual) => {
-                const nCapAtual = atual.totalCapturas || 1;
-                const nCapMelhor = melhor.totalCapturas || 1;
-                return (nCapAtual > nCapMelhor) ? atual : melhor;
-            }, capturas[0]);
-        } else {
-            const jogadasSeguras = mvs.filter(m => !verificarSeSeraCapturada(m.para.r, m.para.c));
-            if (jogadasSeguras.length > 0) {
-                if (turnoIA === 1) {
-                    jogadaEscolhida = jogadasSeguras.sort((a, b) => a.para.r - b.para.r)[0];
-                } else {
-                    jogadaEscolhida = jogadasSeguras.sort((a, b) => b.para.r - a.para.r)[0];
-                }
+            const valorBase =
+                (v === 3 || v === 4) ? 6 : 3; // dama vale mais
+
+            if (ehIA) {
+                score += valorBase;
+                score += (turnoIA === 1 ? (7 - r) : r) * 0.1; // avanço
             } else {
-                jogadaEscolhida = mvs[Math.floor(Math.random() * mvs.length)];
-            }
-        }
-
-        if (jogadaEscolhida) {
-            const rDestino = jogadaEscolhida.para.r;
-            const cDestino = jogadaEscolhida.para.c;
-            
-            selecionada = jogadaEscolhida.de;
-            validarEMover(rDestino, cDestino);
-            desenhar();
-
-            // --- LÓGICA DE COMBO CORRIGIDA ---
-            // Verificamos se, após mover, a mesma peça AINDA pode capturar mais alguém
-            const novasJogadas = obterTodosMvs(mapa, turno);
-            const podeContinuarComendo = novasJogadas.some(m => 
-                m.de.r === rDestino && m.de.c === cDestino && m.cap
-            );
-
-            if (turno === turnoIA && podeContinuarComendo) {
-                labelStatus.innerText = "Continuando combo...";
-                setTimeout(() => jogadaDaIA(), 800);
-                return; // Mantém a função rodando para o combo
+                score -= valorBase;
             }
         }
     }
 
-    // Se chegou aqui, a vez da IA acabou de verdade
-    labelStatus.innerText = statusOriginal;
+    return score;
 }
 
-// Função auxiliar para a IA não ser "burra" e entregar peças
-function verificarSeSeraCapturada(r, c) {
-    const oponenteTurno = (turno === 1 ? 2 : 1);
-    // Simula se na posição (r,c) o oponente teria uma captura imediata
-    const mvsOponente = obterTodosMvs(mapa, oponenteTurno);
-    return mvsOponente.some(m => m.cap && m.cap.r === r && m.cap.c === c);
+function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turnoIA) {
+    if (profundidade === 0) {
+        return avaliarTabuleiro(mapa, turnoIA);
+    }
+
+    const mvs = obterTodosMvs(mapa, turnoAtual);
+    if (mvs.length === 0) {
+        return maximizando ? -9999 : 9999;
+    }
+
+    if (maximizando) {
+        let melhor = -Infinity;
+
+        for (const mv of mvs) {
+            const copia = JSON.parse(JSON.stringify(mapa));
+            aplicarMovimentoSimulado(copia, mv, turnoAtual);
+
+            const valor = minimax(
+                copia,
+                profundidade - 1,
+                alpha,
+                beta,
+                false,
+                turnoAtual === 1 ? 2 : 1,
+                turnoIA
+            );
+
+            melhor = Math.max(melhor, valor);
+            alpha = Math.max(alpha, valor);
+            if (beta <= alpha) break;
+        }
+
+        return melhor;
+    } else {
+        let pior = Infinity;
+
+        for (const mv of mvs) {
+            const copia = JSON.parse(JSON.stringify(mapa));
+            aplicarMovimentoSimulado(copia, mv, turnoAtual);
+
+            const valor = minimax(
+                copia,
+                profundidade - 1,
+                alpha,
+                beta,
+                true,
+                turnoAtual === 1 ? 2 : 1,
+                turnoIA
+            );
+
+            pior = Math.min(pior, valor);
+            beta = Math.min(beta, valor);
+            if (beta <= alpha) break;
+        }
+
+        return pior;
+    }
+}
+
+function aplicarMovimentoSimulado(mapa, mv, turno) {
+    const { de, para, cap } = mv;
+
+    mapa[para.r][para.c] = mapa[de.r][de.c];
+    mapa[de.r][de.c] = 0;
+
+    if (cap) {
+        mapa[cap.r][cap.c] = 0;
+    }
+}
+
+function obterJogadasValidasObrigatorias(mapa, turno) {
+    const todas = obterTodosMvs(mapa, turno);
+    const capturas = todas.filter(m => m.cap);
+
+    // Se houver captura, SOMENTE capturas são válidas
+    return capturas.length > 0 ? capturas : todas;
+}
+
+// --- IA AVANÇADA CORRIGIDA (SEM ERRO DE COMBO) ---
+async function jogadaDaIA() {
+    const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
+    if (turno !== turnoIA || modoJogo !== 'ia') return;
+
+    await new Promise(r => setTimeout(r, 800));
+
+    // 🔥 AQUI ESTÁ A CORREÇÃO PRINCIPAL
+    const jogadasValidas = obterJogadasValidasObrigatorias(mapa, turnoIA);
+
+    if (jogadasValidas.length === 0) return;
+
+    let melhorJogada = null;
+    let melhorValor = -Infinity;
+    const profundidade = 4; // ajuste se quiser
+
+    for (const mv of jogadasValidas) {
+        const copia = JSON.parse(JSON.stringify(mapa));
+        aplicarMovimentoSimulado(copia, mv, turnoIA);
+
+        const valor = minimax(
+            copia,
+            profundidade,
+            -Infinity,
+            Infinity,
+            false,
+            turnoIA === 1 ? 2 : 1,
+            turnoIA
+        );
+
+        if (valor > melhorValor) {
+            melhorValor = valor;
+            melhorJogada = mv;
+        }
+    }
+
+    if (melhorJogada) {
+        selecionada = melhorJogada.de;
+        validarEMover(melhorJogada.para.r, melhorJogada.para.c);
+        desenhar();
+    }
 }
 
 function verificarFimDeJogo() {
