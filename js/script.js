@@ -507,93 +507,145 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- MONITORAMENTO ONLINE COM TRAVA DE ESTABILIDADE ---
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
+    // 1. MONITOR DE NOMES E ESTADO DA SALA
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
         if (modoJogo !== 'online') return;
 
         const nomesAtuais = snap.val() || {};
 
-        // ✅ CONFIRMA PARTIDA (NUNCA DESCONFIRMA DEPOIS)
+        // ✅ GATILHO DE LIBERAÇÃO: Confirma partida se ambos estiverem na sala
         if (nomesAtuais.vermelho && nomesAtuais.preto) {
+            console.log("🎮 Partida Pronta! Ambos os jogadores estão online.");
             jogoIniciado = true;
             partidaConfirmada = true;
         }
 
-        // 🔴 VERIFICA QUEM REALMENTE SAIU
+        // 🔴 LÓGICA DE SAÍDA (QUEM SAIU DA SALA)
         Object.keys(nomesAnteriores).forEach(lado => {
-            const saiuDeVerdade =
-                nomesAnteriores[lado] &&     // Existia antes
-                !nomesAtuais[lado] &&        // Não veio agora
-                jogadoresAntigos[lado] &&    // Estava confirmado
-                lado !== meuLado;            // Não sou eu
+            const existiaAntes = nomesAnteriores[lado];
+            const naoExisteAgora = !nomesAtuais[lado];
+            const naoSouEu = lado !== meuLado;
 
-            // ⛔ NÃO BLOQUEIA PARTIDA JÁ CONFIRMADA
-            if (saiuDeVerdade && !partidaConfirmada) {
+            // Só processa saída se a partida NÃO estiver em andamento (fase de lobby)
+            // ou se for uma desconexão real crítica
+            if (existiaAntes && naoExisteAgora && naoSouEu) {
                 const nomeQueSumiu = nomesAnteriores[lado];
                 const ladoQueSumiu = lado;
 
-                // Evita timers duplicados
+                // Limpa temporizadores antigos para evitar bugs
                 if (temporizadoresSaida[ladoQueSumiu]) {
                     clearTimeout(temporizadoresSaida[ladoQueSumiu]);
                 }
 
-                // Delay de segurança contra oscilação do Firebase
+                // Delay de 2 segundos para ignorar oscilações rápidas de rede
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
-                    exibirAlertaSaida(nomeQueSumiu);
+                    // Verifica novamente se ele não voltou nesse meio tempo
+                    if (!nomesAtuais[ladoQueSumiu]) {
+                        exibirAlertaSaida?.(nomeQueSumiu);
+                        
+                        // Se a partida ainda não tinha começado de verdade, reseta o estado
+                        if (!partidaConfirmada) {
+                            jogoIniciado = false;
+                        }
 
-                    // ✅ CORREÇÃO IMPORTANTE
-                    // Só derruba a partida se REALMENTE faltar alguém
-                    if (!nomesAtuais.vermelho || !nomesAtuais.preto) {
-                        jogoIniciado = false;
+                        const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+                        const campo = document.getElementById(idCampoOponente);
+                        if (campo) campo.value = "Aguardando...";
                     }
-
-                    const idCampoOponente =
-                        (ladoQueSumiu === 'vermelho')
-                            ? 'input-nome-v'
-                            : 'input-nome-p';
-
-                    const campo = document.getElementById(idCampoOponente);
-                    if (campo) campo.value = "Aguardando...";
-
                     delete temporizadoresSaida[ladoQueSumiu];
                 }, 2000);
             }
         });
 
-        // 🟢 VERIFICA QUEM VOLTOU / ATUALIZA NOME
+        // 🟢 LÓGICA DE RETORNO / ENTRADA (QUEM CHEGOU)
         Object.keys(nomesAtuais).forEach(lado => {
+            // Se o jogador voltou antes do timer de 2s acabar, cancela a "saída"
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
                 delete temporizadoresSaida[lado];
+                console.log(`✅ Jogador ${lado} estabilizou a conexão.`);
             }
 
-            const idCampo =
-                (lado === 'vermelho')
-                    ? 'input-nome-v'
-                    : 'input-nome-p';
-
+            // Atualiza o nome visualmente no placar
+            const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
             const campo = document.getElementById(idCampo);
             if (campo && nomesAtuais[lado]) {
                 campo.value = nomesAtuais[lado];
             }
         });
 
-        // Guarda estado atual para próxima comparação
+        // Salva o estado para a próxima comparação
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE CONEXÃO GLOBAL (APENAS INFORMATIVO)
+    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO
+    onValue(ref(db, 'partida_unica'), (snapshot) => {
+        if (modoJogo !== 'online') return;
+        
+        // ⚠️ IMPORTANTE: Não sobrescreve o mapa se o jogador local estiver movendo uma peça
+        if (selecionada !== null) return;
+
+        const data = snapshot.val();
+        if (!data || !data.mapa) return;
+
+        console.log("🔄 Tabuleiro sincronizado via Firebase.");
+        mapa = data.mapa;
+        turno = data.turno;
+        capturasV = data.capturasV;
+        capturasP = data.capturasP;
+        
+        if (typeof desenhar === 'function') desenhar();
+    });
+
+    // 3. MONITOR DE CONEXÃO COM O SERVIDOR (DEBUG)
     onValue(ref(db, ".info/connected"), (snap) => {
         if (snap.val() === true) {
-            console.log("🟢 Conectado ao servidor");
+            console.log("🟢 Conectado ao Firebase");
         } else {
-            console.warn("🟡 Conexão oscilando...");
+            console.warn("🟡 Conexão perdida com o servidor...");
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
