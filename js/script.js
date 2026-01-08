@@ -474,41 +474,67 @@ window.confirmarCadastro = (ladoEscolhido) => {
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
-    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
+    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
+        if (modoJogo !== 'online') return;
+
         const nomesAtuais = snap.val() || {};
 
-        // VERIFICA QUEM SAIU
+        // 🔴 VERIFICA QUEM REALMENTE SAIU
         Object.keys(nomesAnteriores).forEach(lado => {
-            if (nomesAnteriores[lado] && !nomesAtuais[lado] && lado !== meuLado) {
+            const saiuDeVerdade =
+                nomesAnteriores[lado] &&   // Existia antes
+                !nomesAtuais[lado] &&       // Não veio agora
+                jogadoresAntigos[lado] &&   // 🔥 Estava confirmado como jogador
+                lado !== meuLado;           // Não sou eu
+
+            if (saiuDeVerdade) {
                 const nomeQueSumiu = nomesAnteriores[lado];
                 const ladoQueSumiu = lado;
 
-                if (temporizadoresSaida[ladoQueSumiu]) clearTimeout(temporizadoresSaida[ladoQueSumiu]);
+                // Evita timers duplicados
+                if (temporizadoresSaida[ladoQueSumiu]) {
+                    clearTimeout(temporizadoresSaida[ladoQueSumiu]);
+                }
 
+                // Delay de segurança contra oscilação do Firebase
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
                     exibirAlertaSaida(nomeQueSumiu);
                     jogoIniciado = false;
-                    const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+
+                    const idCampoOponente =
+                        (ladoQueSumiu === 'vermelho')
+                            ? 'input-nome-v'
+                            : 'input-nome-p';
+
                     const campo = document.getElementById(idCampoOponente);
                     if (campo) campo.value = "Aguardando...";
+
                     delete temporizadoresSaida[ladoQueSumiu];
-                }, 2000); 
+                }, 2000);
             }
         });
 
-        // VERIFICA QUEM VOLTOU
+        // 🟢 VERIFICA QUEM VOLTOU / ATUALIZA NOME
         Object.keys(nomesAtuais).forEach(lado => {
+            // Cancela alerta de saída se o jogador voltou
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
                 delete temporizadoresSaida[lado];
             }
-            const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+
+            const idCampo =
+                (lado === 'vermelho')
+                    ? 'input-nome-v'
+                    : 'input-nome-p';
+
             const campo = document.getElementById(idCampo);
             if (campo && nomesAtuais[lado]) {
                 campo.value = nomesAtuais[lado];
             }
         });
+
+        // Guarda estado atual para a próxima comparação
         nomesAnteriores = { ...nomesAtuais };
     });
 
@@ -704,48 +730,57 @@ function atualizarUI() {
 }
 
 function clicar(r, c) {
+    // 🔒 CONTROLE ONLINE (TURNO + JOGO INICIADO)
     if (modoJogo === 'online') {
-        const meuLadoNormalizado = meuLado ? meuLado.toLowerCase() : "";
-        const meuTurnoID = (meuLadoNormalizado === 'vermelho' ? 1 : 2);
-        
-        // Bloqueio de Turno
-        if (turno !== meuTurnoID) {
-            console.log("Não é sua vez! Turno no Firebase:", turno);
+        // Define corretamente o turno do jogador
+        const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
+
+        // Aguarda os dois jogadores estarem online
+        if (!jogoIniciado) {
+            console.warn("Aguardando ambos os jogadores...");
             return;
         }
-        
-        // Trava de Jogo Iniciado
-        if (!jogoIniciado) {
-            console.warn("Aguardando oponente...");
+
+        // Bloqueia se não for a minha vez
+        if (turno !== meuTurnoID) {
+            console.log("Não é sua vez! Turno atual:", turno);
             return;
         }
     }
 
     const valor = mapa[r][c];
-    
-    // --- CORREÇÃO DA LÓGICA DE SELEÇÃO ---
-    // Se turno é 1 (Ímpar), procura peças 1 ou 3 (Ímpares)
-    // Se turno é 2 (Par), procura peças 2 ou 4 (Pares)
+
+    // 🔴 LÓGICA DE SELEÇÃO DE PEÇA (SEGURA)
     const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
     const ehVezDoPreto = (turno === 2 && (valor === 2 || valor === 4));
 
+    // 👉 SELEÇÃO DE PEÇA
     if (ehVezDoVermelho || ehVezDoPreto) {
         const todasAsJogadas = obterTodosMvs(mapa, turno);
         const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
+        // Força captura se existir
         if (capturasObrigatorias.length > 0) {
-            const estaPecaPodeComer = capturasObrigatorias.some(m => m.de.r === r && m.de.c === c);
+            const estaPecaPodeComer = capturasObrigatorias.some(
+                m => m.de.r === r && m.de.c === c
+            );
+
             if (!estaPecaPodeComer) {
-                if (typeof window.mostrarAvisoCaptura === 'function') window.mostrarAvisoCaptura();
-                return; 
+                if (typeof window.mostrarAvisoCaptura === 'function') {
+                    window.mostrarAvisoCaptura();
+                }
+                return;
             }
         }
 
         selecionada = { r, c };
-        desenhar(); 
+        desenhar();
         console.log("Peça selecionada:", selecionada);
-    } 
-    else if (selecionada && valor === 0) {
+        return;
+    }
+
+    // 👉 MOVIMENTO
+    if (selecionada && valor === 0) {
         validarEMover(r, c);
     }
 }
