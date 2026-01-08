@@ -471,9 +471,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
 // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
 // Variáveis globais (deixe fora das funções)
-let nomesAnteriores = {};
-let temporizadoresSaida = {}; 
-
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
@@ -525,37 +522,6 @@ function iniciarMonitoramentoOnline() {
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
     const alerta = document.createElement('div');
@@ -568,25 +534,7 @@ function exibirAlertaSaida(nome) {
         alerta.style.opacity = '0';
         alerta.style.transform = 'translate(-50%, -20px)';
         setTimeout(() => alerta.remove(), 1000); // Tempo da transição CSS
-    }, 3000);
-}
-
-function exibirAlertaSaida(nome) {
-    const alerta = document.createElement('div');
-    alerta.className = 'feedback-saida'; // Vamos criar o CSS para isso
-    alerta.innerHTML = `<span>⚠️</span> O jogador <b>${nome}</b> saiu da sala!`;
-    
-    document.body.appendChild(alerta);
-
-    // Remove o alerta após 4 segundos
-    setTimeout(() => {
-        alerta.style.opacity = '0';
-        alerta.style.transform = 'translateY(-20px)';
-        setTimeout(() => alerta.remove(), 1000);
     }, 4000);
-
-    // Opcional: Pausar o jogo ou avisar que o oponente saiu
-    jogoIniciado = false;
 }
 
 window.validarCliqueAvatar = (ladoClicado) => {
