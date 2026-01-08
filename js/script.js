@@ -174,6 +174,7 @@ onValue(gameRef, (snapshot) => {
 
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
+let partidaConfirmada = false;
 let temporizadoresSaida = {};
 let jogadoresAntigos = {};
 let nomesAnteriores = {};
@@ -469,9 +470,8 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 };
 
-// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
-// Variáveis globais (deixe fora das funções)
-function iniciarMonitoramentoOnline() {
+    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
+    function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
     // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
@@ -480,15 +480,22 @@ function iniciarMonitoramentoOnline() {
 
         const nomesAtuais = snap.val() || {};
 
+        // ✅ CONFIRMA PARTIDA (NUNCA DESCONFIRMA DEPOIS)
+        if (nomesAtuais.vermelho && nomesAtuais.preto) {
+            jogoIniciado = true;
+            partidaConfirmada = true;
+        }
+
         // 🔴 VERIFICA QUEM REALMENTE SAIU
         Object.keys(nomesAnteriores).forEach(lado => {
             const saiuDeVerdade =
-                nomesAnteriores[lado] &&   // Existia antes
-                !nomesAtuais[lado] &&       // Não veio agora
-                jogadoresAntigos[lado] &&   // 🔥 Estava confirmado como jogador
-                lado !== meuLado;           // Não sou eu
+                nomesAnteriores[lado] &&     // Existia antes
+                !nomesAtuais[lado] &&         // Não veio agora
+                jogadoresAntigos[lado] &&     // Estava confirmado
+                lado !== meuLado;             // Não sou eu
 
-            if (saiuDeVerdade) {
+            // ⛔ NÃO BLOQUEIA PARTIDA JÁ CONFIRMADA
+            if (saiuDeVerdade && !partidaConfirmada) {
                 const nomeQueSumiu = nomesAnteriores[lado];
                 const ladoQueSumiu = lado;
 
@@ -517,7 +524,6 @@ function iniciarMonitoramentoOnline() {
 
         // 🟢 VERIFICA QUEM VOLTOU / ATUALIZA NOME
         Object.keys(nomesAtuais).forEach(lado => {
-            // Cancela alerta de saída se o jogador voltou
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
                 delete temporizadoresSaida[lado];
@@ -534,11 +540,11 @@ function iniciarMonitoramentoOnline() {
             }
         });
 
-        // Guarda estado atual para a próxima comparação
+        // Guarda estado atual para próxima comparação
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE CONEXÃO GLOBAL
+    // 2. MONITOR DE CONEXÃO GLOBAL (APENAS INFORMATIVO)
     onValue(ref(db, ".info/connected"), (snap) => {
         if (snap.val() === true) {
             console.log("🟢 Conectado ao servidor");
