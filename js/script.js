@@ -890,6 +890,24 @@ window.mostrarAvisoCaptura = function() {
     }
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function validarEMover(r, c) {
 
     // 🔒 TRAVA ONLINE
@@ -929,10 +947,13 @@ function validarEMover(r, c) {
         if (typeof animarPecaParaPlacar === 'function') {
             animarPecaParaPlacar(rCap, cCap, valorPecaComida);
         }
-        
+
         mapa[rCap][cCap] = 0; 
-        if (turno === 1) capturasV++; else capturasP++;
+        if (turno === 1) capturasV++; 
+        else capturasP++;
+
         tocarSom('cap');
+
     } else {
         tocarSom('move');
     }
@@ -942,9 +963,11 @@ function validarEMover(r, c) {
     let pecaFinal = pecaValor;
 
     if ((turno === 1 && r === 0) || (turno === 2 && r === 7)) {
-        if (pecaValor <= 2) pecaFinal = (turno === 1 ? 3 : 4);
+        if (pecaValor <= 2) {
+            pecaFinal = (turno === 1 ? 3 : 4);
+        }
     }
-    
+
     mapa[r][c] = pecaFinal;
     mapa[selecionada.r][selecionada.c] = 0;
 
@@ -958,19 +981,19 @@ function validarEMover(r, c) {
 
     if (temMais) {
 
-        // Continua combo
-        selecionada = { r, c }; 
+        // Continua o combo
+        selecionada = { r, c };
 
     } else {
 
         selecionada = null;
 
-        // 🔥 CORREÇÃO PRINCIPAL (ONLINE)
+        // 🔥 CONTROLE DE TURNO CORRETO
         if (modoJogo === 'online') {
 
             const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
 
-            // Só quem jogou muda o turno
+            // Só quem jogou pode mudar o turno
             if (turno === meuTurnoID) {
                 turno = (turno === 1 ? 2 : 1);
             }
@@ -1001,6 +1024,21 @@ function validarEMover(r, c) {
         setTimeout(jogadaDaIA, 600);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
