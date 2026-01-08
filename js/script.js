@@ -522,7 +522,7 @@ function iniciarMonitoramentoFotos() {
 
 
 
-// --- MONITORAMENTO ONLINE COM TRAVA DE ESTABILIDADE ---
+// --- MONITORAMENTO ONLINE COM TRAVA DE ESTABILIDADE E LIBERAÇÃO DE JOGO ---
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
@@ -532,11 +532,14 @@ function iniciarMonitoramentoOnline() {
 
         const nomesAtuais = snap.val() || {};
 
-        // ✅ GATILHO DE LIBERAÇÃO: Confirma partida se ambos estiverem na sala
+        // ✅ GATILHO DE LIBERAÇÃO CRÍTICO: 
+        // Se ambos os lados possuem nomes, desbloqueia as variáveis globais imediatamente.
         if (nomesAtuais.vermelho && nomesAtuais.preto) {
             console.log("🎮 Partida Pronta! Ambos os jogadores estão online.");
-            jogoIniciado = true;
-            partidaConfirmada = true;
+            
+            // Estas duas linhas abaixo resolvem o erro "Aguardando oponente para começar..."
+            jogoIniciado = true;      
+            partidaConfirmada = true; 
         }
 
         // 🔴 LÓGICA DE SAÍDA (QUEM SAIU DA SALA)
@@ -545,24 +548,22 @@ function iniciarMonitoramentoOnline() {
             const naoExisteAgora = !nomesAtuais[lado];
             const naoSouEu = lado !== meuLado;
 
-            // Só processa saída se a partida NÃO estiver em andamento (fase de lobby)
-            // ou se for uma desconexão real crítica
             if (existiaAntes && naoExisteAgora && naoSouEu) {
                 const nomeQueSumiu = nomesAnteriores[lado];
                 const ladoQueSumiu = lado;
 
-                // Limpa temporizadores antigos para evitar bugs
                 if (temporizadoresSaida[ladoQueSumiu]) {
                     clearTimeout(temporizadoresSaida[ladoQueSumiu]);
                 }
 
-                // Delay de 2 segundos para ignorar oscilações rápidas de rede
+                // Delay de 2 segundos para evitar quedas por oscilação de internet
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
-                    // Verifica novamente se ele não voltou nesse meio tempo
                     if (!nomesAtuais[ladoQueSumiu]) {
-                        exibirAlertaSaida?.(nomeQueSumiu);
+                        if (typeof exibirAlertaSaida === 'function') {
+                            exibirAlertaSaida(nomeQueSumiu);
+                        }
                         
-                        // Se a partida ainda não tinha começado de verdade, reseta o estado
+                        // Se a partida caiu antes de começar, bloqueia o jogo
                         if (!partidaConfirmada) {
                             jogoIniciado = false;
                         }
@@ -576,16 +577,13 @@ function iniciarMonitoramentoOnline() {
             }
         });
 
-        // 🟢 LÓGICA DE RETORNO / ENTRADA (QUEM CHEGOU)
+        // 🟢 LÓGICA DE RETORNO / ENTRADA
         Object.keys(nomesAtuais).forEach(lado => {
-            // Se o jogador voltou antes do timer de 2s acabar, cancela a "saída"
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
                 delete temporizadoresSaida[lado];
-                console.log(`✅ Jogador ${lado} estabilizou a conexão.`);
             }
 
-            // Atualiza o nome visualmente no placar
             const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
             const campo = document.getElementById(idCampo);
             if (campo && nomesAtuais[lado]) {
@@ -593,38 +591,40 @@ function iniciarMonitoramentoOnline() {
             }
         });
 
-        // Salva o estado para a próxima comparação
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO
+    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (DADOS DA PARTIDA)
     onValue(ref(db, 'partida_unica'), (snapshot) => {
         if (modoJogo !== 'online') return;
         
-        // ⚠️ IMPORTANTE: Não sobrescreve o mapa se o jogador local estiver movendo uma peça
+        // Proteção: não atualiza o tabuleiro se o jogador local estiver com uma peça selecionada
         if (selecionada !== null) return;
 
         const data = snapshot.val();
         if (!data || !data.mapa) return;
 
-        console.log("🔄 Tabuleiro sincronizado via Firebase.");
+        console.log("🔄 Tabuleiro sincronizado via Firebase. Turno:", data.turno);
+        
         mapa = data.mapa;
         turno = data.turno;
-        capturasV = data.capturasV;
-        capturasP = data.capturasP;
+        capturasV = data.capturasV || 0;
+        capturasP = data.capturasP || 0;
         
         if (typeof desenhar === 'function') desenhar();
     });
 
-    // 3. MONITOR DE CONEXÃO COM O SERVIDOR (DEBUG)
+    // 3. MONITOR DE STATUS DA CONEXÃO
     onValue(ref(db, ".info/connected"), (snap) => {
         if (snap.val() === true) {
-            console.log("🟢 Conectado ao Firebase");
+            console.log("🟢 Conectado ao servidor");
         } else {
-            console.warn("🟡 Conexão perdida com o servidor...");
+            console.warn("🟡 Conexão oscilando...");
         }
     });
 }
+
+
 
 
 
