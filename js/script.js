@@ -630,8 +630,24 @@ window.validarCliqueAvatar = (ladoClicado) => {
 };
 
 window.salvarNoFirebase = () => {
+
     if (modoJogo !== 'online') return;
-    set(gameRef, { mapa, turno, capturasV, capturasP, ts: Date.now() });
+
+    const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
+
+    // 🔒 SÓ quem jogou pode salvar
+    if (turno !== meuTurnoID) {
+        console.warn("Bloqueado: tentativa de salvar fora do turno");
+        return;
+    }
+
+    set(gameRef, {
+        mapa,
+        turno,
+        capturasV,
+        capturasP,
+        ts: Date.now()
+    });
 };
 
 window.reiniciar = () => {
@@ -663,8 +679,8 @@ window.reiniciar = () => {
     atualizarUI();
 
     // 4. Sincronizar se estiver online
-    if (modoJogo === 'online') {
-        window.salvarNoFirebase();
+    if (modoJogo === 'online' && meuLado === 'vermelho') {
+    window.salvarNoFirebase();
     }
 };
 
