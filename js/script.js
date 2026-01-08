@@ -508,8 +508,21 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE 
-    function iniciarMonitoramentoOnline() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
+function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
@@ -527,9 +540,9 @@ function iniciarMonitoramentoFotos() {
         Object.keys(nomesAnteriores).forEach(lado => {
             const saiuDeVerdade =
                 nomesAnteriores[lado] &&     // Existia antes
-                !nomesAtuais[lado] &&         // Não veio agora
-                jogadoresAntigos[lado] &&     // Estava confirmado
-                lado !== meuLado;             // Não sou eu
+                !nomesAtuais[lado] &&        // Não veio agora
+                jogadoresAntigos[lado] &&    // Estava confirmado
+                lado !== meuLado;            // Não sou eu
 
             // ⛔ NÃO BLOQUEIA PARTIDA JÁ CONFIRMADA
             if (saiuDeVerdade && !partidaConfirmada) {
@@ -595,6 +608,22 @@ function iniciarMonitoramentoFotos() {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
