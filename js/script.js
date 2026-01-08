@@ -320,7 +320,6 @@ window.alterarNome = function(lado) {
 };
 
 
-
 // --- SISTEMA DE EMOJIS ---
 window.abrirModalEmoji = function(ladoDoBotao) {
     if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
@@ -629,25 +628,6 @@ window.validarCliqueAvatar = (ladoClicado) => {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 window.salvarNoFirebase = (novoTurno = turno) => {
 
     if (modoJogo !== 'online') return;
@@ -738,33 +718,6 @@ function desenhar() {
     }
     atualizarUI();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function atualizarDestaqueTurno() {
     const boxV = document.getElementById('box-vermelho');
@@ -862,40 +815,37 @@ function clicar(r, c) {
 
     // 🔒 CONTROLE ONLINE
     if (modoJogo === 'online') {
+        // Define o ID numérico baseado no lado (Vermelho = 1, Preto = 2)
+        const meuTurnoID = (meuLado === 'vermelho') ? 1 : (meuLado === 'preto' ? 2 : null);
 
-        const meuTurnoID =
-            meuLado === 'vermelho' ? 1 :
-            meuLado === 'preto' ? 2 : null;
-
-        // 🔥 CORREÇÃO
-        // Só bloqueia se a partida AINDA NÃO foi confirmada
+        // 1. Só permite interagir se a partida foi confirmada (ambos na sala)
         if (!partidaConfirmada) {
-            console.warn("Aguardando ambos os jogadores...");
+            console.warn("Aguardando ambos os jogadores para iniciar...");
             return;
         }
 
-        // Bloqueia se não for a minha vez
+        // 2. Bloqueia o clique se não for a vez do jogador atual
         if (turno !== meuTurnoID) {
-            console.log("Não é sua vez! Turno atual:", turno);
+            console.log("Não é sua vez! Turno atual do jogador:", turno);
             return;
         }
     }
 
     const valor = mapa[r][c];
 
-    // 🔴 LÓGICA DE SELEÇÃO
+    // 🔴 LÓGICA DE DEFINIÇÃO DE TIME
+    // Valor 1 e 3 = Vermelhas (Normal e Dama)
+    // Valor 2 e 4 = Pretas (Normal e Dama)
     const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
     const ehVezDoPreto    = (turno === 2 && (valor === 2 || valor === 4));
 
-    // 👉 SELEÇÃO DE PEÇA
+    // 👉 PASSO 1: SELEÇÃO DE PEÇA
     if (ehVezDoVermelho || ehVezDoPreto) {
-
         const todasAsJogadas = obterTodosMvs(mapa, turno);
         const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-        // ⚠️ Força captura se existir
+        // ⚠️ LEI DA CAPTURA (SOPRO): Força captura se existir uma disponível
         if (capturasObrigatorias.length > 0) {
-
             const estaPecaPodeComer = capturasObrigatorias.some(
                 m => m.de.r === r && m.de.c === c
             );
@@ -904,27 +854,24 @@ function clicar(r, c) {
                 if (typeof window.mostrarAvisoCaptura === 'function') {
                     window.mostrarAvisoCaptura();
                 }
+                console.log("Existem capturas obrigatórias com outras peças!");
                 return;
             }
         }
 
+        // Seleciona a peça e redesenha o tabuleiro para mostrar o destaque
         selecionada = { r, c };
         desenhar();
+        console.log(`Peça selecionada em: R${r} C${c}`);
         return;
     }
 
-    // 👉 MOVIMENTO
+    // 👉 PASSO 2: MOVIMENTO (Se já houver uma peça selecionada e clicar em casa vazia)
     if (selecionada && valor === 0) {
+        console.log(`Tentando mover para: R${r} C${c}`);
         validarEMover(r, c);
     }
 }
-
-
-
-
-
-
-
 
 
 
@@ -978,24 +925,6 @@ window.mostrarAvisoCaptura = function() {
         setTimeout(() => aviso.remove(), 2500);
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function validarEMover(r, c) {
 
@@ -1092,21 +1021,6 @@ function validarEMover(r, c) {
         setTimeout(jogadaDaIA, 600);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
