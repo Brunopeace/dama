@@ -875,6 +875,8 @@ window.mostrarAvisoCaptura = function() {
 };
 
 function validarEMover(r, c) {
+
+    // 🔒 TRAVA ONLINE
     if (modoJogo === 'online' && !jogoIniciado) {
         if (typeof window.exibirFeedback === 'function') {
             window.exibirFeedback("Aguardando oponente para começar...", "erro");
@@ -894,6 +896,7 @@ function validarEMover(r, c) {
 
     if (!movValido) return;
 
+    // ⚠️ CAPTURA OBRIGATÓRIA
     if (temCapturaNoTabuleiro && !movValido.cap) {
         if (typeof window.mostrarAvisoCaptura === 'function') {
             window.mostrarAvisoCaptura();
@@ -918,6 +921,7 @@ function validarEMover(r, c) {
         tocarSom('move');
     }
 
+    // --- COROAÇÃO ---
     const pecaValor = mapa[selecionada.r][selecionada.c];
     let pecaFinal = pecaValor;
 
@@ -928,7 +932,7 @@ function validarEMover(r, c) {
     mapa[r][c] = pecaFinal;
     mapa[selecionada.r][selecionada.c] = 0;
 
-    // --- LÓGICA DE CONTINUIDADE ---
+    // --- CONTINUIDADE DE CAPTURA ---
     const novasJogadas = obterTodosMvs(mapa, turno);
     const temMais = movValido.cap && novasJogadas.some(m => 
         m.de.r === r && 
@@ -937,24 +941,46 @@ function validarEMover(r, c) {
     );
 
     if (temMais) {
+
+        // Continua combo
         selecionada = { r, c }; 
+
     } else {
+
         selecionada = null;
-        turno = (turno === 1 ? 2 : 1); 
-        
-        if (typeof verificarFimDeJogo === 'function') verificarFimDeJogo();
+
+        // 🔥 CORREÇÃO PRINCIPAL (ONLINE)
+        if (modoJogo === 'online') {
+
+            const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
+
+            // Só quem jogou muda o turno
+            if (turno === meuTurnoID) {
+                turno = (turno === 1 ? 2 : 1);
+            }
+
+        } else {
+            // Offline / IA
+            turno = (turno === 1 ? 2 : 1);
+        }
+
+        if (typeof verificarFimDeJogo === 'function') {
+            verificarFimDeJogo();
+        }
     }
 
-    // ATUALIZAÇÃO VISUAL LOCAL (Antes do Firebase)
+    // --- ATUALIZAÇÃO VISUAL ---
     desenhar(); 
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
     if (typeof atualizarUI === 'function') atualizarUI();
 
-    // SINCRONIZAÇÃO EXTERNA
+    // --- SINCRONIZAÇÃO ---
     if (modoJogo === 'online') {
+
         if (typeof window.salvarNoFirebase === 'function') {
             window.salvarNoFirebase();
         }
+
     } else if (modoJogo === 'ia' && !temMais && turno !== meuLado) {
         setTimeout(jogadaDaIA, 600);
     }
