@@ -43,29 +43,6 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Variável para comparar o estado anterior (coloque fora da função onValue)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
@@ -107,19 +84,6 @@ onValue(playersRef, (snap) => {
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
     const totalJogadores = Object.keys(jogadoresAtuais).length;
     
@@ -134,57 +98,10 @@ onValue(playersRef, (snap) => {
 } else {
     jogoIniciado = false;
 }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-    // Guarda o estado atual para a próxima comparação
+   
+   // Guarda o estado atual para a próxima comparação
     jogadoresAntigos = { ...jogadoresAtuais };
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Função para exibir o alerta visual de entrada
 function notificarEntrada(lado) {
@@ -225,7 +142,6 @@ function atualizarIndicadoresStatus(jogadores) {
         if (textoP) textoP.innerText = "Aguardando...";
     }
 }
-
 
 // Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
 // APAGUE OS DOIS ANTERIORES E USE APENAS ESTE:
@@ -592,9 +508,10 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE (ANTI FALSO POSITIVO)
+// 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE 
     function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
+
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
         if (modoJogo !== 'online') return;
 
@@ -627,7 +544,12 @@ function iniciarMonitoramentoFotos() {
                 // Delay de segurança contra oscilação do Firebase
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
                     exibirAlertaSaida(nomeQueSumiu);
-                    jogoIniciado = false;
+
+                    // ✅ CORREÇÃO IMPORTANTE
+                    // Só derruba a partida se REALMENTE faltar alguém
+                    if (!nomesAtuais.vermelho || !nomesAtuais.preto) {
+                        jogoIniciado = false;
+                    }
 
                     const idCampoOponente =
                         (ladoQueSumiu === 'vermelho')
@@ -1277,22 +1199,6 @@ function exibirModalVitoria(vencedor) {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function obterTodosMvs(m, j) {
     let res = [];
     for (let r = 0; r < 8; r++) {
@@ -1329,25 +1235,7 @@ function obterTodosMvs(m, j) {
                             }
                         }
                     } else {
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+                       
                         // LÓGICA PEÇA COMUM
                         let nr = r + dr, nc = c + dc;
 if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && m[nr][nc] === 0) {
