@@ -926,17 +926,40 @@ window.mostrarAvisoCaptura = function() {
     }
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function validarEMover(r, c) {
 
     // 🔒 TRAVA ONLINE
+    // Impede movimentos se o modo for online mas o oponente ainda não entrou
     if (modoJogo === 'online' && !jogoIniciado) {
-        window.exibirFeedback?.("Aguardando oponente para começar...", "erro");
+        if (typeof window.exibirFeedback === 'function') {
+            window.exibirFeedback("Aguardando oponente para começar...", "erro");
+        } else {
+            console.warn("Aguardando oponente para começar...");
+        }
         return;
     }
 
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     const temCapturaNoTabuleiro = todasAsJogadas.some(m => m.cap);
 
+    // Encontra o movimento específico na lista de jogadas legais
     const movValido = todasAsJogadas.find(m => 
         m.de.r === selecionada.r &&
         m.de.c === selecionada.c &&
@@ -944,44 +967,53 @@ function validarEMover(r, c) {
         m.para.c === c
     );
 
+    // Se o clique não corresponde a um movimento válido, cancela
     if (!movValido) return;
 
-    // ⚠️ CAPTURA OBRIGATÓRIA
+    // ⚠️ REGRA DA CAPTURA OBRIGATÓRIA (Lei do "Sopro")
+    // Se existe alguma captura possível no tabuleiro e o movimento escolhido não é de captura
     if (temCapturaNoTabuleiro && !movValido.cap) {
-        window.mostrarAvisoCaptura?.();
+        if (typeof window.mostrarAvisoCaptura === 'function') {
+            window.mostrarAvisoCaptura();
+        }
         return;
     }
 
     // --- EXECUÇÃO DO MOVIMENTO ---
     if (movValido.cap) {
-
         const rCap = movValido.cap.r;
         const cCap = movValido.cap.c;
 
-        animarPecaParaPlacar?.(rCap, cCap, mapa[rCap][cCap]);
+        // Animação visual da peça sendo comida indo para o placar
+        if (typeof animarPecaParaPlacar === 'function') {
+            animarPecaParaPlacar(rCap, cCap, mapa[rCap][cCap]);
+        }
 
-        mapa[rCap][cCap] = 0;
+        mapa[rCap][cCap] = 0; // Remove a peça capturada
         turno === 1 ? capturasV++ : capturasP++;
-        tocarSom('cap');
+        
+        if (typeof tocarSom === 'function') tocarSom('cap');
 
     } else {
-        tocarSom('move');
+        if (typeof tocarSom === 'function') tocarSom('move');
     }
 
-    // --- COROAÇÃO ---
+    // --- COROAÇÃO (VIRAR DAMA) ---
     const pecaValor = mapa[selecionada.r][selecionada.c];
     let pecaFinal = pecaValor;
 
+    // Linha 0 para Vermelhas (Turno 1) / Linha 7 para Pretas (Turno 2)
     if ((turno === 1 && r === 0) || (turno === 2 && r === 7)) {
-        if (pecaValor <= 2) {
-            pecaFinal = turno === 1 ? 3 : 4;
+        if (pecaValor <= 2) { // Se ainda for peça comum
+            pecaFinal = (turno === 1) ? 3 : 4; // 3=Dama Vermelha, 4=Dama Preta
+            console.log("Peça coroada!");
         }
     }
 
     mapa[r][c] = pecaFinal;
     mapa[selecionada.r][selecionada.c] = 0;
 
-    // --- CONTINUIDADE ---
+    // --- CONTINUIDADE (COMBO DE CAPTURA) ---
     const novasJogadas = obterTodosMvs(mapa, turno);
     const temMais = movValido.cap && novasJogadas.some(m =>
         m.de.r === r &&
@@ -990,37 +1022,63 @@ function validarEMover(r, c) {
     );
 
     if (temMais) {
-
-        // Continua combo
+        // Se puder continuar capturando com a mesma peça, não muda o turno
         selecionada = { r, c };
-
+        console.log("Combo detectado! Continue sua jogada.");
     } else {
-
+        // Finaliza a jogada e troca o turno
         selecionada = null;
-
         const novoTurno = (turno === 1 ? 2 : 1);
 
-        // 🔥 SALVA PRIMEIRO (ONLINE)
+        // 🔥 SALVA NO FIREBASE (MODO ONLINE)
+        // Passamos o novoTurno para garantir que o banco de dados receba a vez do oponente
         if (modoJogo === 'online') {
-            salvarNoFirebase(novoTurno);
+            if (typeof salvarNoFirebase === 'function') {
+                salvarNoFirebase(novoTurno);
+            } else {
+                // Caso a função salvarNoFirebase não esteja no escopo global
+                set(gameRef, {
+                    mapa: mapa,
+                    turno: novoTurno,
+                    capturasV: capturasV,
+                    capturasP: capturasP,
+                    ts: Date.now()
+                });
+            }
         }
 
-        // 🔥 DEPOIS MUDA LOCAL
+        // 🔥 ATUALIZA TURNO LOCAL
         turno = novoTurno;
 
-        verificarFimDeJogo?.();
+        if (typeof verificarFimDeJogo === 'function') {
+            verificarFimDeJogo();
+        }
     }
 
-    // --- UI ---
+    // --- ATUALIZAÇÃO DA INTERFACE (UI) ---
     desenhar();
-    atualizarDestaqueTurno?.();
-    atualizarUI?.();
+    if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
+    if (typeof atualizarUI === 'function') atualizarUI();
 
-    // --- IA ---
-    if (modoJogo === 'ia' && !temMais && turno !== meuLado) {
-        setTimeout(jogadaDaIA, 600);
+    // --- LÓGICA DE IA (MODO OFFLINE) ---
+    if (modoJogo === 'ia' && !temMais) {
+        // Verifica se agora é a vez da máquina (IA)
+        const turnoIA = (meuLado === 'vermelho' ? 2 : 1);
+        if (turno === turnoIA) {
+            setTimeout(jogadaDaIA, 600);
+        }
     }
 }
+
+
+
+
+
+
+
+
+
+
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
