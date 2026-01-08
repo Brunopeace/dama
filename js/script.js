@@ -43,6 +43,29 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Variável para comparar o estado anterior (coloque fora da função onValue)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
@@ -84,24 +107,84 @@ onValue(playersRef, (snap) => {
         }
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
     // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
     const totalJogadores = Object.keys(jogadoresAtuais).length;
     
     // Atualiza os pontinhos verde/cinza no placar
     atualizarIndicadoresStatus(jogadoresAtuais);
 
-    if (totalJogadores === 2) {
-        if (!jogoIniciado) {
-            console.log("Partida Pronta! Ambos os jogadores estão online.");
-        }
-        jogoIniciado = true;
-    } else {
-        jogoIniciado = false;
+    if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
+    if (!jogoIniciado) {
+        console.log("Partida Pronta! Ambos os jogadores estão online.");
     }
+    jogoIniciado = true;
+} else {
+    jogoIniciado = false;
+}
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     // Guarda o estado atual para a próxima comparação
     jogadoresAntigos = { ...jogadoresAtuais };
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Função para exibir o alerta visual de entrada
 function notificarEntrada(lado) {
