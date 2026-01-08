@@ -840,14 +840,35 @@ function atualizarUI() {
     document.getElementById('box-preto').classList.toggle('turno-ativo-preto', turno === 2);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function clicar(r, c) {
 
     // 🔒 CONTROLE ONLINE
     if (modoJogo === 'online') {
 
-        const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
+        const meuTurnoID =
+            meuLado === 'vermelho' ? 1 :
+            meuLado === 'preto' ? 2 : null;
 
-        // 🔥 CORREÇÃO: Só bloqueia se a partida AINDA NÃO foi confirmada
+        // 🔥 CORREÇÃO
+        // Só bloqueia se a partida AINDA NÃO foi confirmada
         if (!partidaConfirmada) {
             console.warn("Aguardando ambos os jogadores...");
             return;
@@ -864,15 +885,15 @@ function clicar(r, c) {
 
     // 🔴 LÓGICA DE SELEÇÃO
     const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
-    const ehVezDoPreto = (turno === 2 && (valor === 2 || valor === 4));
+    const ehVezDoPreto    = (turno === 2 && (valor === 2 || valor === 4));
 
-    // 👉 SELEÇÃO
+    // 👉 SELEÇÃO DE PEÇA
     if (ehVezDoVermelho || ehVezDoPreto) {
 
         const todasAsJogadas = obterTodosMvs(mapa, turno);
         const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-        // Força captura se existir
+        // ⚠️ Força captura se existir
         if (capturasObrigatorias.length > 0) {
 
             const estaPecaPodeComer = capturasObrigatorias.some(
@@ -897,6 +918,27 @@ function clicar(r, c) {
         validarEMover(r, c);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
