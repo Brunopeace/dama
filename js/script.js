@@ -508,19 +508,6 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
@@ -608,22 +595,6 @@ function iniciarMonitoramentoOnline() {
         }
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -807,13 +778,14 @@ function atualizarUI() {
 }
 
 function clicar(r, c) {
-    // 🔒 CONTROLE ONLINE (TURNO + JOGO INICIADO)
+
+    // 🔒 CONTROLE ONLINE
     if (modoJogo === 'online') {
-        // Define corretamente o turno do jogador
+
         const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
 
-        // Aguarda os dois jogadores estarem online
-        if (!jogoIniciado) {
+        // 🔥 CORREÇÃO: Só bloqueia se a partida AINDA NÃO foi confirmada
+        if (!partidaConfirmada) {
             console.warn("Aguardando ambos os jogadores...");
             return;
         }
@@ -827,17 +799,19 @@ function clicar(r, c) {
 
     const valor = mapa[r][c];
 
-    // 🔴 LÓGICA DE SELEÇÃO DE PEÇA (SEGURA)
+    // 🔴 LÓGICA DE SELEÇÃO
     const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
     const ehVezDoPreto = (turno === 2 && (valor === 2 || valor === 4));
 
-    // 👉 SELEÇÃO DE PEÇA
+    // 👉 SELEÇÃO
     if (ehVezDoVermelho || ehVezDoPreto) {
+
         const todasAsJogadas = obterTodosMvs(mapa, turno);
         const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
         // Força captura se existir
         if (capturasObrigatorias.length > 0) {
+
             const estaPecaPodeComer = capturasObrigatorias.some(
                 m => m.de.r === r && m.de.c === c
             );
