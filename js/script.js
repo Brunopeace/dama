@@ -1194,6 +1194,22 @@ function exibirModalVitoria(vencedor) {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function obterTodosMvs(m, j) {
     let res = [];
     for (let r = 0; r < 8; r++) {
@@ -1230,13 +1246,38 @@ function obterTodosMvs(m, j) {
                             }
                         }
                     } else {
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
                         // LÓGICA PEÇA COMUM
                         let nr = r + dr, nc = c + dc;
-                        if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && m[nr][nc] === 0) {
-                            if (!((j === 1 && dr > 0) || (j === 2 && dr < 0))) {
-                                res.push({ de: { r, c }, para: { r: nr, c: nc } });
-                            }
-                        }
+if (nr >= 0 && nr < 8 && nc >= 0 && nc < 8 && m[nr][nc] === 0) {
+
+    // Vermelho sobe / Preto desce
+    if (
+        (j === 1 && dr < 0) ||  
+        (j === 2 && dr > 0)
+    ) {
+        res.push({ de: { r, c }, para: { r: nr, c: nc } });
+    }
+}
+                             
                         let cr = r + dr * 2, cc = c + dc * 2;
                         if (cr >= 0 && cr < 8 && cc >= 0 && cc < 8 && m[cr][cc] === 0) {
                             if (m[nr][nc] !== 0 && m[nr][nc] % 2 !== j % 2) {
