@@ -351,36 +351,50 @@ onValue(emojiRef, (snap) => {
 
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
-    const nome = document.getElementById('modal-input-nome').value.trim();
+    const nomeInput = document.getElementById('modal-input-nome');
+    const nome = nomeInput ? nomeInput.value.trim() : "";
     
     // Validação Profissional: Não deixa escolher o modo sem o nome
     if (nome.length < 3) {
         const erro = document.getElementById('nome-error');
-        erro.innerText = "Digite seu nome";
-        document.getElementById('modal-input-nome').style.borderColor = "#ff5f6d";
+        if (erro) erro.innerText = "Digite seu nome (mínimo 3 letras)";
+        nomeInput.style.borderColor = "#ff5f6d";
         return;
     }
 
     // Limpa erros
-    document.getElementById('nome-error').innerText = "";
-    document.getElementById('modal-input-nome').style.borderColor = "#333";
+    const erroLabel = document.getElementById('nome-error');
+    if (erroLabel) erroLabel.innerText = "";
+    nomeInput.style.borderColor = "#333";
 
-    // Define o modo
+    // Define o modo globalmente
     modoJogo = modo;
 
     // Feedback visual nos cards
     document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-    document.getElementById(`card-${modo}`).classList.add('selected');
+    const cardAtivo = document.getElementById(`card-${modo}`);
+    if (cardAtivo) cardAtivo.classList.add('selected');
+
+    // --- ATIVAÇÃO DO MONITORAMENTO SE FOR ONLINE ---
+    // Isso evita que o código tente ler o Firebase antes da hora ou no modo IA
+    if (modo === 'online') {
+        console.log("Modo Online selecionado. Ativando monitoramento...");
+        if (typeof iniciarMonitoramentoOnline === 'function') {
+            iniciarMonitoramentoOnline();
+        }
+    }
 
     // Mostra a escolha de lados com animação
     const sideSelection = document.getElementById('side-selection');
-    sideSelection.style.display = 'block';
-    sideSelection.style.animation = 'fadeIn 0.5s ease';
+    if (sideSelection) {
+        sideSelection.style.display = 'block';
+        sideSelection.style.animation = 'fadeIn 0.5s ease';
+    }
 };
 
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
-    const nomeDigitado = nomeInput.value.trim();
+    const nomeDigitado = nomeInput ? nomeInput.value.trim() : "";
 
     if (nomeDigitado === "") {
         alert("Por favor, digite seu nome!");
@@ -431,86 +445,116 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 
     // 7. FINALIZAÇÃO VISUAL E GATILHO INICIAL IA
-    document.getElementById('modal-cadastro').style.display = 'none';
+    const modal = document.getElementById('modal-cadastro');
+    if (modal) modal.style.display = 'none';
+    
     const selecaoLado = document.getElementById('selecao-lado-container');
     if (selecaoLado) selecaoLado.style.display = 'none';
 
     desenhar();
     console.log(`Cadastro confirmado: ${nomeDigitado} (${meuLado})`);
 
-    // --- ALTERAÇÃO ESSENCIAL: Dispara IA se ela começar o jogo ---
+    // --- GATILHO INICIAL PARA IA ---
     if (modoJogo === 'ia') {
+        // Se eu sou vermelho, a IA é 2 (preto). Se eu sou preto, a IA é 1 (vermelho).
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
+        
+        // Se o turno atual do tabuleiro coincidir com o da IA, ela começa
         if (turno === idTurnoIA) {
-            console.log("Turno inicial é da IA. Iniciando jogada...");
+            console.log("IA detectou que deve começar o jogo...");
             setTimeout(() => {
-                jogadaDaIA();
-            }, 1000); // Pausa de 1s para o jogador ver o tabuleiro primeiro
+                if (typeof jogadaDaIA === 'function') jogadaDaIA();
+            }, 1000); 
         }
     }
 };
 
 // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
-onValue(ref(db, 'partida_unica/nomes'), (snap) => {
+// Variáveis globais (deixe fora das funções)
+let nomesAnteriores = {};
+let temporizadoresSaida = {}; 
+
+function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
-    
-    const nomesAtuais = snap.val() || {};
 
-    // --- VERIFICA QUEM SAIU (com atraso para evitar falsos positivos) ---
-    Object.keys(nomesAnteriores).forEach(lado => {
-        // Se o nome existia e agora sumiu, e NÃO é o meu próprio lado
-        if (nomesAnteriores[lado] && !nomesAtuais[lado] && lado !== meuLado) {
-            const nomeQueSumiu = nomesAnteriores[lado];
-            const ladoQueSumiu = lado;
+    // 1. MONITOR DE NOMES COM TRAVA DE ESTABILIDADE
+    onValue(ref(db, 'partida_unica/nomes'), (snap) => {
+        const nomesAtuais = snap.val() || {};
 
-            // Se já houver um temporizador para este lado, limpa antes de criar outro
-            if (temporizadoresSaida[ladoQueSumiu]) clearTimeout(temporizadoresSaida[ladoQueSumiu]);
+        // VERIFICA QUEM SAIU
+        Object.keys(nomesAnteriores).forEach(lado => {
+            if (nomesAnteriores[lado] && !nomesAtuais[lado] && lado !== meuLado) {
+                const nomeQueSumiu = nomesAnteriores[lado];
+                const ladoQueSumiu = lado;
 
-            // Aguarda 2 segundos antes de disparar o alerta
-            temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
-                exibirAlertaSaida(nomeQueSumiu);
-                
-                // Para o jogo e limpa o placar do oponente que saiu
-                jogoIniciado = false;
-                const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
-                const campo = document.getElementById(idCampoOponente);
-                if (campo) campo.value = "Aguardando...";
-                
-                delete temporizadoresSaida[ladoQueSumiu];
-            }, 2000); 
-        }
+                if (temporizadoresSaida[ladoQueSumiu]) clearTimeout(temporizadoresSaida[ladoQueSumiu]);
+
+                temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
+                    exibirAlertaSaida(nomeQueSumiu);
+                    jogoIniciado = false;
+                    const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+                    const campo = document.getElementById(idCampoOponente);
+                    if (campo) campo.value = "Aguardando...";
+                    delete temporizadoresSaida[ladoQueSumiu];
+                }, 2000); 
+            }
+        });
+
+        // VERIFICA QUEM VOLTOU
+        Object.keys(nomesAtuais).forEach(lado => {
+            if (temporizadoresSaida[lado]) {
+                clearTimeout(temporizadoresSaida[lado]);
+                delete temporizadoresSaida[lado];
+            }
+            const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+            const campo = document.getElementById(idCampo);
+            if (campo && nomesAtuais[lado]) {
+                campo.value = nomesAtuais[lado];
+            }
+        });
+        nomesAnteriores = { ...nomesAtuais };
     });
 
-    // --- VERIFICA QUEM VOLTOU (Reconexão rápida ou troca de turno) ---
-    Object.keys(nomesAtuais).forEach(lado => {
-        // Se o nome reapareceu antes dos 2 segundos, cancela o alerta de saída
-        if (temporizadoresSaida[lado]) {
-            clearTimeout(temporizadoresSaida[lado]);
-            delete temporizadoresSaida[lado];
-            console.log(`Jogador ${nomesAtuais[lado]} estabilizou conexão.`);
-        }
-
-        // Atualiza os nomes nos inputs do placar em tempo real
-        const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
-        const campo = document.getElementById(idCampo);
-        if (campo && nomesAtuais[lado]) {
-            campo.value = nomesAtuais[lado];
+    // 2. MONITOR DE CONEXÃO GLOBAL
+    onValue(ref(db, ".info/connected"), (snap) => {
+        if (snap.val() === true) {
+            console.log("🟢 Conectado ao servidor");
+        } else {
+            console.warn("🟡 Conexão oscilando...");
         }
     });
+}
 
-    // Atualiza a lista de referência para a próxima comparação
-    nomesAnteriores = { ...nomesAtuais };
-});
 
-// 2. MONITOR DE CONEXÃO GLOBAL
-const connectedRef = ref(db, ".info/connected");
-onValue(connectedRef, (snap) => {
-    if (snap.val() === true) {
-        console.log("🟢 Conectado ao servidor de jogo");
-    } else {
-        console.warn("🟡 Conexão com o servidor oscilando...");
-    }
-});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
