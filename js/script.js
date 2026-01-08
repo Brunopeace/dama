@@ -629,13 +629,32 @@ window.validarCliqueAvatar = (ladoClicado) => {
     }
 };
 
-window.salvarNoFirebase = () => {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+window.salvarNoFirebase = (novoTurno = turno) => {
 
     if (modoJogo !== 'online') return;
 
     const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
 
-    // 🔒 SÓ quem jogou pode salvar
+    // 🔒 Só quem acabou de jogar pode salvar
     if (turno !== meuTurnoID) {
         console.warn("Bloqueado: tentativa de salvar fora do turno");
         return;
@@ -643,11 +662,12 @@ window.salvarNoFirebase = () => {
 
     set(gameRef, {
         mapa,
-        turno,
+        turno: novoTurno, // 🔥 envia já o próximo turno
         capturasV,
         capturasP,
         ts: Date.now()
     });
+
 };
 
 window.reiniciar = () => {
@@ -718,6 +738,33 @@ function desenhar() {
     }
     atualizarUI();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function atualizarDestaqueTurno() {
     const boxV = document.getElementById('box-vermelho');
@@ -912,9 +959,7 @@ function validarEMover(r, c) {
 
     // 🔒 TRAVA ONLINE
     if (modoJogo === 'online' && !jogoIniciado) {
-        if (typeof window.exibirFeedback === 'function') {
-            window.exibirFeedback("Aguardando oponente para começar...", "erro");
-        }
+        window.exibirFeedback?.("Aguardando oponente para começar...", "erro");
         return;
     }
 
@@ -922,9 +967,9 @@ function validarEMover(r, c) {
     const temCapturaNoTabuleiro = todasAsJogadas.some(m => m.cap);
 
     const movValido = todasAsJogadas.find(m => 
-        m.de.r === selecionada.r && 
-        m.de.c === selecionada.c && 
-        m.para.r === r && 
+        m.de.r === selecionada.r &&
+        m.de.c === selecionada.c &&
+        m.para.r === r &&
         m.para.c === c
     );
 
@@ -932,26 +977,20 @@ function validarEMover(r, c) {
 
     // ⚠️ CAPTURA OBRIGATÓRIA
     if (temCapturaNoTabuleiro && !movValido.cap) {
-        if (typeof window.mostrarAvisoCaptura === 'function') {
-            window.mostrarAvisoCaptura();
-        }
-        return; 
+        window.mostrarAvisoCaptura?.();
+        return;
     }
 
     // --- EXECUÇÃO DO MOVIMENTO ---
     if (movValido.cap) {
+
         const rCap = movValido.cap.r;
         const cCap = movValido.cap.c;
-        const valorPecaComida = mapa[rCap][cCap];
 
-        if (typeof animarPecaParaPlacar === 'function') {
-            animarPecaParaPlacar(rCap, cCap, valorPecaComida);
-        }
+        animarPecaParaPlacar?.(rCap, cCap, mapa[rCap][cCap]);
 
-        mapa[rCap][cCap] = 0; 
-        if (turno === 1) capturasV++; 
-        else capturasP++;
-
+        mapa[rCap][cCap] = 0;
+        turno === 1 ? capturasV++ : capturasP++;
         tocarSom('cap');
 
     } else {
@@ -964,63 +1003,50 @@ function validarEMover(r, c) {
 
     if ((turno === 1 && r === 0) || (turno === 2 && r === 7)) {
         if (pecaValor <= 2) {
-            pecaFinal = (turno === 1 ? 3 : 4);
+            pecaFinal = turno === 1 ? 3 : 4;
         }
     }
 
     mapa[r][c] = pecaFinal;
     mapa[selecionada.r][selecionada.c] = 0;
 
-    // --- CONTINUIDADE DE CAPTURA ---
+    // --- CONTINUIDADE ---
     const novasJogadas = obterTodosMvs(mapa, turno);
-    const temMais = movValido.cap && novasJogadas.some(m => 
-        m.de.r === r && 
-        m.de.c === c && 
+    const temMais = movValido.cap && novasJogadas.some(m =>
+        m.de.r === r &&
+        m.de.c === c &&
         m.cap
     );
 
     if (temMais) {
 
-        // Continua o combo
+        // Continua combo
         selecionada = { r, c };
 
     } else {
 
         selecionada = null;
 
-        // 🔥 CONTROLE DE TURNO CORRETO
+        const novoTurno = (turno === 1 ? 2 : 1);
+
+        // 🔥 SALVA PRIMEIRO (ONLINE)
         if (modoJogo === 'online') {
-
-            const meuTurnoID = (meuLado === 'vermelho') ? 1 : 2;
-
-            // Só quem jogou pode mudar o turno
-            if (turno === meuTurnoID) {
-                turno = (turno === 1 ? 2 : 1);
-            }
-
-        } else {
-            // Offline / IA
-            turno = (turno === 1 ? 2 : 1);
+            salvarNoFirebase(novoTurno);
         }
 
-        if (typeof verificarFimDeJogo === 'function') {
-            verificarFimDeJogo();
-        }
+        // 🔥 DEPOIS MUDA LOCAL
+        turno = novoTurno;
+
+        verificarFimDeJogo?.();
     }
 
-    // --- ATUALIZAÇÃO VISUAL ---
-    desenhar(); 
-    if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
-    if (typeof atualizarUI === 'function') atualizarUI();
+    // --- UI ---
+    desenhar();
+    atualizarDestaqueTurno?.();
+    atualizarUI?.();
 
-    // --- SINCRONIZAÇÃO ---
-    if (modoJogo === 'online') {
-
-        if (typeof window.salvarNoFirebase === 'function') {
-            window.salvarNoFirebase();
-        }
-
-    } else if (modoJogo === 'ia' && !temMais && turno !== meuLado) {
+    // --- IA ---
+    if (modoJogo === 'ia' && !temMais && turno !== meuLado) {
         setTimeout(jogadaDaIA, 600);
     }
 }
