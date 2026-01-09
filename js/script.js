@@ -311,6 +311,17 @@ window.carregarFoto = function(event, imgId, iconId) {
     }
 };
 
+
+
+
+
+
+
+
+
+
+
+
 window.alterarNome = function(lado) {
     // Só permite alterar o próprio nome no modo online
     const ladoLongo = lado === 'v' ? 'vermelho' : 'preto';
@@ -506,6 +517,8 @@ function mostrarMeuBotaoSair() {
     }
 }
 
+// --- ✅ MONITORAMENTO
+
 function iniciarMonitoramentoFotos() {
     if (modoJogo !== 'online') return;
 
@@ -548,12 +561,14 @@ function iniciarMonitoramentoOnline() {
 
         const nomesAtuais = snap.val() || {};
 
+        // ✅ GATILHO DE LIBERAÇÃO CRÍTICO
         if (nomesAtuais.vermelho && nomesAtuais.preto) {
             console.log("🎮 Partida Pronta! Ambos os jogadores estão online.");
             jogoIniciado = true;      
             partidaConfirmada = true; 
         }
 
+        // 🔴 LÓGICA DE SAÍDA (QUEM SAIU DA SALA)
         Object.keys(nomesAnteriores).forEach(lado => {
             const existiaAntes = nomesAnteriores[lado];
             const naoExisteAgora = !nomesAtuais[lado];
@@ -579,7 +594,7 @@ function iniciarMonitoramentoOnline() {
             }
         });
 
-        // LÓGICA DE ATUALIZAÇÃO DE NOMES
+        // 🟢 LÓGICA DE ATUALIZAÇÃO DE NOMES
         Object.keys(nomesAtuais).forEach(lado => {
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
@@ -593,14 +608,14 @@ function iniciarMonitoramentoOnline() {
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO
+    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO E EVENTOS DE SAÍDA TOTAL
     onValue(ref(db, 'partida_unica'), (snapshot) => {
         if (modoJogo !== 'online') return;
         
-        // Se o banco foi apagado (alguém saiu), fecha o jogo
+        // Se o banco foi apagado (alguém clicou em Sair do Jogo)
         if (!snapshot.exists()) {
             if (jogoIniciado) {
-                exibirAlertaSaida("Oponente");
+                if (typeof exibirAlertaSaida === 'function') exibirAlertaSaida("Oponente");
                 setTimeout(() => window.location.reload(), 3000);
             }
             return;
@@ -608,6 +623,8 @@ function iniciarMonitoramentoOnline() {
 
         const data = snapshot.val();
         if (!data || !data.mapa) return;
+
+        // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
         if (selecionada !== null) return;
 
         mapa = data.mapa;
@@ -618,39 +635,53 @@ function iniciarMonitoramentoOnline() {
         if (typeof desenhar === 'function') desenhar();
     });
 
-    // 3. 🔥 NOVO: MONITOR DE FOTOS EM TEMPO REAL (GALERIA)
+    // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (CORRIGIDO PARA OS IDs DO SEU HTML)
     onValue(ref(db, 'partida_unica/fotos'), (snap) => {
         if (modoJogo !== 'online') return;
         const fotos = snap.val() || {};
 
+        // Sincroniza ambos os lados (Vermelho e Preto)
         const lados = ['vermelho', 'preto'];
         lados.forEach(l => {
             if (fotos[l]) {
-                // IDs devem ser compatíveis com o seu carregarFoto: 'foto-v'/'foto-p' ou 'img-v'/'img-p'
-                const idImg = (l === 'vermelho') ? 'foto-v' : 'foto-p'; 
+                // IDs EXATOS conforme o seu HTML:
+                // Lado Vermelho: img-vermelho / icon-v
+                // Lado Preto: img-preto / icon-p
+                const idImg = (l === 'vermelho') ? 'img-vermelho' : 'img-preto'; 
                 const idIcon = (l === 'vermelho') ? 'icon-v' : 'icon-p';
                 
                 const imgElement = document.getElementById(idImg);
                 const iconElement = document.getElementById(idIcon);
 
+                // Só atualiza se o src for diferente (evita loops e cintilação)
                 if (imgElement && imgElement.src !== fotos[l]) {
                     imgElement.src = fotos[l];
                     imgElement.style.display = 'block';
                     if (iconElement) iconElement.style.display = 'none';
+                    console.log(`📸 Foto de ${l} sincronizada com sucesso.`);
                 }
             }
         });
     });
 
-    // 4. MONITOR DE STATUS DA CONEXÃO
+    // 4. MONITOR DE STATUS DA CONEXÃO GLOBAL
     onValue(ref(db, ".info/connected"), (snap) => {
         if (snap.val() === true) {
-            console.log("🟢 Conectado ao servidor");
+            console.log("🟢 Conectado ao servidor Firebase");
         } else {
-            console.warn("🟡 Conexão oscilando...");
+            console.warn("🟡 Conexão instável ou offline...");
         }
     });
 }
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
