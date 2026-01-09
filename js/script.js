@@ -1,5 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+import { 
+    getDatabase, 
+    ref, 
+    set, 
+    onValue, 
+    update, // 👈 Adicione isso aqui
+    remove  // 👈 Recomendo adicionar também para funções de sair/limpar
+} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
 // --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
@@ -12,9 +19,10 @@ const firebaseConfig = {
     appId: "1:210757872906:web:6df8f84418976330dcdef3"
 };
 
-// --- CONFIGURAÇÃO FIREBASE ---
+// Inicialização
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+
 
 // 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
@@ -143,48 +151,67 @@ function atualizarIndicadoresStatus(jogadores) {
     }
 }
 
-// Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
+
+
+
+
+
+// 0901-1
+
+// Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
     if (modoJogo !== 'online') return;
     
-    // 🔥 VERIFICA SE O JOGO FOI ENCERRADO (BOTÃO SAIR)
-    if (!snapshot.exists()) {
-        if (jogoIniciado) {
-            // Tenta pegar o nome do oponente para o alerta
-            const nomeV = document.getElementById('input-nome-v').value;
-            const nomeP = document.getElementById('input-nome-p').value;
-            const oponente = (meuLado === 'vermelho') ? nomeP : nomeV;
-
-            exibirAlertaSaida(oponente || "Oponente");
-            
-            // Bloqueia novas jogadas e recarrega após o alerta
-            jogoIniciado = false;
-            setTimeout(() => {
-                window.location.reload();
-            }, 3000);
-        }
-        return;
-    }
+    // ✅ REMOVIDO: A verificação de snapshot.exists() com alerta de saída.
+    // Agora o monitor apenas ignora se os dados estiverem temporariamente ausentes
+    if (!snapshot.exists()) return;
 
     const data = snapshot.val();
+    
+    // Verifica se os dados do mapa existem antes de prosseguir
     if (!data || !data.mapa) return;
 
-    // A TRAVA: Se eu selecionei uma peça, ignoro a atualização do banco
+    // A TRAVA: Se você estiver com uma peça selecionada (na mão), 
+    // não sobrescrevemos o seu mapa para evitar que a peça "fuja" da sua mão
     if (selecionada !== null) return;
 
-    // Atualiza as variáveis globais
+    // Atualiza as variáveis globais com os dados vindos do oponente/banco
     mapa = data.mapa;
     turno = data.turno;
     capturasV = data.capturasV || 0;
     capturasP = data.capturasP || 0;
     
+    // Renderiza visualmente as mudanças
     desenhar();
     
     if (typeof atualizarUI === 'function') atualizarUI();
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 
-    console.log("Tabuleiro sincronizado. Turno atual:", turno);
+    console.log("🔄 Tabuleiro sincronizado. Vez do jogador:", turno);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
@@ -551,11 +578,17 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
+
+
+
+            // 0901-2
+
+
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
-    // 1. MONITOR DE NOMES E ESTADO DA SALA
+    // 1. MONITOR DE NOMES E ESTADO DA SALA (GERENCIA SAÍDAS E ENTRADAS)
     onValue(ref(db, 'partida_unica/nomes'), (snap) => {
         if (modoJogo !== 'online') return;
 
@@ -568,7 +601,7 @@ function iniciarMonitoramentoOnline() {
             partidaConfirmada = true; 
         }
 
-        // 🔴 LÓGICA DE SAÍDA (QUEM SAIU DA SALA)
+        // 🔴 LÓGICA DE SAÍDA REAL (DISPARA SE O NOME SUMIR DO BANCO)
         Object.keys(nomesAnteriores).forEach(lado => {
             const existiaAntes = nomesAnteriores[lado];
             const naoExisteAgora = !nomesAtuais[lado];
@@ -582,8 +615,15 @@ function iniciarMonitoramentoOnline() {
 
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
                     if (!nomesAtuais[ladoQueSumiu]) {
+                        // Alerta apenas se o jogador realmente não voltou em 2 segundos
                         if (typeof exibirAlertaSaida === 'function') exibirAlertaSaida(nomeQueSumiu);
-                        if (!partidaConfirmada) jogoIniciado = false;
+                        
+                        // Se a partida já estava rolando, recarrega após alguém sair permanentemente
+                        if (partidaConfirmada) {
+                            setTimeout(() => window.location.reload(), 3000);
+                        } else {
+                            jogoIniciado = false;
+                        }
 
                         const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
                         const campo = document.getElementById(idCampoOponente);
@@ -608,20 +648,12 @@ function iniciarMonitoramentoOnline() {
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO E EVENTOS DE SAÍDA TOTAL
+    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (SOMENTE MOVIMENTOS)
     onValue(ref(db, 'partida_unica'), (snapshot) => {
-        if (modoJogo !== 'online') return;
+        if (modoJogo !== 'online' || !snapshot.exists()) return;
         
-        // Se o banco foi apagado (alguém clicou em Sair do Jogo)
-        if (!snapshot.exists()) {
-            if (jogoIniciado) {
-                if (typeof exibirAlertaSaida === 'function') exibirAlertaSaida("Oponente");
-                setTimeout(() => window.location.reload(), 3000);
-            }
-            return;
-        }
-
         const data = snapshot.val();
+        // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
         if (!data || !data.mapa) return;
 
         // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
@@ -633,32 +665,27 @@ function iniciarMonitoramentoOnline() {
         capturasP = data.capturasP || 0;
         
         if (typeof desenhar === 'function') desenhar();
+        console.log("🔄 Tabuleiro sincronizado via rede.");
     });
 
-    // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (CORRIGIDO PARA OS IDs DO SEU HTML)
+    // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (IDs DO SEU HTML: img-vermelho, img-preto)
     onValue(ref(db, 'partida_unica/fotos'), (snap) => {
         if (modoJogo !== 'online') return;
         const fotos = snap.val() || {};
 
-        // Sincroniza ambos os lados (Vermelho e Preto)
         const lados = ['vermelho', 'preto'];
         lados.forEach(l => {
             if (fotos[l]) {
-                // IDs EXATOS conforme o seu HTML:
-                // Lado Vermelho: img-vermelho / icon-v
-                // Lado Preto: img-preto / icon-p
                 const idImg = (l === 'vermelho') ? 'img-vermelho' : 'img-preto'; 
                 const idIcon = (l === 'vermelho') ? 'icon-v' : 'icon-p';
                 
                 const imgElement = document.getElementById(idImg);
                 const iconElement = document.getElementById(idIcon);
 
-                // Só atualiza se o src for diferente (evita loops e cintilação)
                 if (imgElement && imgElement.src !== fotos[l]) {
                     imgElement.src = fotos[l];
                     imgElement.style.display = 'block';
                     if (iconElement) iconElement.style.display = 'none';
-                    console.log(`📸 Foto de ${l} sincronizada com sucesso.`);
                 }
             }
         });
@@ -666,13 +693,25 @@ function iniciarMonitoramentoOnline() {
 
     // 4. MONITOR DE STATUS DA CONEXÃO GLOBAL
     onValue(ref(db, ".info/connected"), (snap) => {
-        if (snap.val() === true) {
-            console.log("🟢 Conectado ao servidor Firebase");
-        } else {
-            console.warn("🟡 Conexão instável ou offline...");
-        }
+        console.log(snap.val() === true ? "🟢 Servidor Conectado" : "🟡 Conexão Oscilando");
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -998,8 +1037,16 @@ window.mostrarAvisoCaptura = function() {
     }
 };
 
-// 🟢 TRAVA ONLINE
 
+
+
+
+
+
+
+        // 0901-3
+
+// 🟢 TRAVA ONLINE E EXECUÇÃO DE MOVIMENTO
 function validarEMover(r, c) {
 
     // Impede movimentos se o modo for online mas o oponente ainda não entrou
@@ -1080,25 +1127,37 @@ function validarEMover(r, c) {
         // Se puder continuar capturando com a mesma peça, não muda o turno
         selecionada = { r, c };
         console.log("Combo detectado! Continue sua jogada.");
+
+        // Sincroniza o mapa parcial no Firebase para o oponente ver o "pulo" da peça
+        if (modoJogo === 'online') {
+            import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(({ update }) => {
+                update(gameRef, { 
+                    mapa: mapa,
+                    capturasV: capturasV,
+                    capturasP: capturasP
+                });
+            });
+        }
     } else {
         // Finaliza a jogada e troca o turno
         selecionada = null;
         const novoTurno = (turno === 1 ? 2 : 1);
 
-        // 🔥 SALVA NO FIREBASE (MODO ONLINE)
+        // 🔥 SALVA NO FIREBASE (MODO ONLINE) - ATUALIZAÇÃO SEGURA
         if (modoJogo === 'online') {
-            if (typeof salvarNoFirebase === 'function') {
-                salvarNoFirebase(novoTurno);
-            } else {
-
-                set(gameRef, {
+            // Importação dinâmica do update caso não esteja no topo
+            import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(({ update }) => {
+                // USAMOS UPDATE EM VEZ DE SET PARA NÃO APAGAR NOMES E FOTOS
+                update(gameRef, {
                     mapa: mapa,
                     turno: novoTurno,
                     capturasV: capturasV,
                     capturasP: capturasP,
-                    ts: Date.now()
-                });
-            }
+                    ts: Date.now() // Timestamp para marcar a última alteração
+                }).then(() => {
+                    console.log("Sincronização concluída via update.");
+                }).catch(err => console.error("Erro ao atualizar:", err));
+            });
         }
 
         turno = novoTurno;
@@ -1115,13 +1174,42 @@ function validarEMover(r, c) {
 
     // --- LÓGICA DE IA (MODO OFFLINE) ---
     if (modoJogo === 'ia' && !temMais) {
-        // Verifica se agora é a vez da máquina (IA)
         const turnoIA = (meuLado === 'vermelho' ? 2 : 1);
         if (turno === turnoIA) {
             setTimeout(jogadaDaIA, 600);
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
