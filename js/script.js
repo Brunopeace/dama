@@ -103,7 +103,7 @@ onValue(playersRef, (snap) => {
     jogadoresAntigos = { ...jogadoresAtuais };
 });
 
-// Função para exibir o alerta visual de entrada
+// ✅ Função para exibir o alerta visual de entrada
 function notificarEntrada(lado) {
     const alerta = document.createElement('div');
     alerta.className = 'feedback-entrada';
@@ -144,27 +144,42 @@ function atualizarIndicadoresStatus(jogadores) {
 }
 
 // Monitor do estado do Tabuleiro (Sincroniza as peças e o turno)
-// APAGUE OS DOIS ANTERIORES E USE APENAS ESTE:
 onValue(gameRef, (snapshot) => {
     if (modoJogo !== 'online') return;
     
+    // 🔥 VERIFICA SE O JOGO FOI ENCERRADO (BOTÃO SAIR)
+    if (!snapshot.exists()) {
+        if (jogoIniciado) {
+            // Tenta pegar o nome do oponente para o alerta
+            const nomeV = document.getElementById('input-nome-v').value;
+            const nomeP = document.getElementById('input-nome-p').value;
+            const oponente = (meuLado === 'vermelho') ? nomeP : nomeV;
+
+            exibirAlertaSaida(oponente || "Oponente");
+            
+            // Bloqueia novas jogadas e recarrega após o alerta
+            jogoIniciado = false;
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        }
+        return;
+    }
+
     const data = snapshot.val();
     if (!data || !data.mapa) return;
 
     // A TRAVA: Se eu selecionei uma peça, ignoro a atualização do banco
-    // para que o meu clique não seja cancelado pela rede.
     if (selecionada !== null) return;
 
-    // Atualiza as variáveis globais com os dados que vieram da nuvem
+    // Atualiza as variáveis globais
     mapa = data.mapa;
     turno = data.turno;
-    capturasV = data.capturasV;
-    capturasP = data.capturasP;
+    capturasV = data.capturasV || 0;
+    capturasP = data.capturasP || 0;
     
-    // Atualiza o visual
     desenhar();
     
-    // Chama as funções de interface se elas existirem
     if (typeof atualizarUI === 'function') atualizarUI();
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 
@@ -229,7 +244,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// --- SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
+// ---✅ SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
 window.carregarFoto = function(event, imgId, iconId) {
     const file = event.target.files[0];
     const limiteMB = 2;
@@ -253,7 +268,6 @@ window.carregarFoto = function(event, imgId, iconId) {
                 const ctx = canvas.getContext('2d');
 
                 // Define o tamanho máximo do avatar (ex: 150x150 pixels)
-                // Isso economiza MUITO espaço no Firebase e memória no celular
                 const maxWidth = 150;
                 const maxHeight = 150;
                 let width = imgOriginal.width;
@@ -275,10 +289,7 @@ window.carregarFoto = function(event, imgId, iconId) {
                 canvas.height = height;
                 ctx.drawImage(imgOriginal, 0, 0, width, height);
 
-                // 3. Converte para Base64 com qualidade reduzida (0.7 = 70%)
                 const base64Comprimida = canvas.toDataURL('image/jpeg', 0.7);
-
-                // 4. Atualiza visualmente no placar
                 const imgElement = document.getElementById(imgId);
                 const iconElement = document.getElementById(iconId);
 
@@ -290,9 +301,7 @@ window.carregarFoto = function(event, imgId, iconId) {
                     iconElement.style.display = 'none';
                 }
 
-                // 5. Se for Online, envia a versão leve para o Firebase
                 if (typeof modoJogo !== 'undefined' && modoJogo === 'online') {
-                    // Certifique-se que 'db' e 'ref/set' estão acessíveis aqui
                     const fotoRef = ref(db, `partida_unica/fotos/${meuLado}`);
                     set(fotoRef, base64Comprimida).catch(err => console.error("Erro ao subir foto:", err));
                 }
@@ -307,7 +316,6 @@ window.alterarNome = function(lado) {
     const ladoLongo = lado === 'v' ? 'vermelho' : 'preto';
     if (modoJogo === 'online' && ladoLongo !== meuLado) {
         alert("Você não pode alterar o nome do adversário!");
-        // O onValue acima vai restaurar o nome correto automaticamente
         return;
     }
 
@@ -318,7 +326,6 @@ window.alterarNome = function(lado) {
         set(ref(db, `partida_unica/nomes/${ladoLongo}`), novoNome);
     }
 };
-
 
 // --- SISTEMA DE EMOJIS ---
 window.abrirModalEmoji = function(ladoDoBotao) {
@@ -332,6 +339,8 @@ document.addEventListener('mousedown', (event) => {
         modal.classList.remove('active');
     }
 });
+
+// ✅ emojis
 
 function exibirEmojiNaTela(emoji, lado) {
     const boxId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
@@ -376,7 +385,7 @@ window.selecionarModoCard = (modo) => {
     if (cardAtivo) cardAtivo.classList.add('selected');
 
     // --- ATIVAÇÃO DO MONITORAMENTO SE FOR ONLINE ---
-// Isso evita que o código tente ler o Firebase antes da hora ou no modo IA
+
 if (modo === 'online') {
     console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
 
@@ -408,7 +417,8 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
-    meuLado = ladoEscolhido; 
+    meuLado = ladoEscolhido;
+    mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
     if (meuLado === 'preto') {
@@ -475,6 +485,27 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 };
 
+function mostrarMeuBotaoSair() {
+    // Remove qualquer botão de sair existente para evitar duplicatas
+    const botoesAntigos = document.querySelectorAll('.btn-sair');
+    botoesAntigos.forEach(b => b.remove());
+
+    // Define qual é a MINHA caixa de placar
+    const idMinhaCaixa = (meuLado === 'vermelho') ? 'box-vermelho' : 'box-preto';
+    const container = document.getElementById(idMinhaCaixa);
+
+    if (container) {
+        const btn = document.createElement('button');
+        btn.className = 'btn-sair';
+        btn.innerText = 'Sair';
+        
+        // Chama a função de sair que exclui o Firebase
+        btn.onclick = () => window.sairDoJogo(); 
+        
+        container.appendChild(btn);
+    }
+}
+
 function iniciarMonitoramentoFotos() {
     if (modoJogo !== 'online') return;
 
@@ -507,22 +538,7 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --- MONITORAMENTO ONLINE COM TRAVA DE ESTABILIDADE E LIBERAÇÃO DE JOGO ---
+// --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
@@ -532,17 +548,12 @@ function iniciarMonitoramentoOnline() {
 
         const nomesAtuais = snap.val() || {};
 
-        // ✅ GATILHO DE LIBERAÇÃO CRÍTICO: 
-        // Se ambos os lados possuem nomes, desbloqueia as variáveis globais imediatamente.
         if (nomesAtuais.vermelho && nomesAtuais.preto) {
             console.log("🎮 Partida Pronta! Ambos os jogadores estão online.");
-            
-            // Estas duas linhas abaixo resolvem o erro "Aguardando oponente para começar..."
             jogoIniciado = true;      
             partidaConfirmada = true; 
         }
 
-        // 🔴 LÓGICA DE SAÍDA (QUEM SAIU DA SALA)
         Object.keys(nomesAnteriores).forEach(lado => {
             const existiaAntes = nomesAnteriores[lado];
             const naoExisteAgora = !nomesAtuais[lado];
@@ -552,21 +563,12 @@ function iniciarMonitoramentoOnline() {
                 const nomeQueSumiu = nomesAnteriores[lado];
                 const ladoQueSumiu = lado;
 
-                if (temporizadoresSaida[ladoQueSumiu]) {
-                    clearTimeout(temporizadoresSaida[ladoQueSumiu]);
-                }
+                if (temporizadoresSaida[ladoQueSumiu]) clearTimeout(temporizadoresSaida[ladoQueSumiu]);
 
-                // Delay de 2 segundos para evitar quedas por oscilação de internet
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
                     if (!nomesAtuais[ladoQueSumiu]) {
-                        if (typeof exibirAlertaSaida === 'function') {
-                            exibirAlertaSaida(nomeQueSumiu);
-                        }
-                        
-                        // Se a partida caiu antes de começar, bloqueia o jogo
-                        if (!partidaConfirmada) {
-                            jogoIniciado = false;
-                        }
+                        if (typeof exibirAlertaSaida === 'function') exibirAlertaSaida(nomeQueSumiu);
+                        if (!partidaConfirmada) jogoIniciado = false;
 
                         const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
                         const campo = document.getElementById(idCampoOponente);
@@ -577,35 +579,37 @@ function iniciarMonitoramentoOnline() {
             }
         });
 
-        // 🟢 LÓGICA DE RETORNO / ENTRADA
+        // LÓGICA DE ATUALIZAÇÃO DE NOMES
         Object.keys(nomesAtuais).forEach(lado => {
             if (temporizadoresSaida[lado]) {
                 clearTimeout(temporizadoresSaida[lado]);
                 delete temporizadoresSaida[lado];
             }
-
             const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
             const campo = document.getElementById(idCampo);
-            if (campo && nomesAtuais[lado]) {
-                campo.value = nomesAtuais[lado];
-            }
+            if (campo && nomesAtuais[lado]) campo.value = nomesAtuais[lado];
         });
 
         nomesAnteriores = { ...nomesAtuais };
     });
 
-    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (DADOS DA PARTIDA)
+    // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO
     onValue(ref(db, 'partida_unica'), (snapshot) => {
         if (modoJogo !== 'online') return;
         
-        // Proteção: não atualiza o tabuleiro se o jogador local estiver com uma peça selecionada
-        if (selecionada !== null) return;
+        // Se o banco foi apagado (alguém saiu), fecha o jogo
+        if (!snapshot.exists()) {
+            if (jogoIniciado) {
+                exibirAlertaSaida("Oponente");
+                setTimeout(() => window.location.reload(), 3000);
+            }
+            return;
+        }
 
         const data = snapshot.val();
         if (!data || !data.mapa) return;
+        if (selecionada !== null) return;
 
-        console.log("🔄 Tabuleiro sincronizado via Firebase. Turno:", data.turno);
-        
         mapa = data.mapa;
         turno = data.turno;
         capturasV = data.capturasV || 0;
@@ -614,7 +618,31 @@ function iniciarMonitoramentoOnline() {
         if (typeof desenhar === 'function') desenhar();
     });
 
-    // 3. MONITOR DE STATUS DA CONEXÃO
+    // 3. 🔥 NOVO: MONITOR DE FOTOS EM TEMPO REAL (GALERIA)
+    onValue(ref(db, 'partida_unica/fotos'), (snap) => {
+        if (modoJogo !== 'online') return;
+        const fotos = snap.val() || {};
+
+        const lados = ['vermelho', 'preto'];
+        lados.forEach(l => {
+            if (fotos[l]) {
+                // IDs devem ser compatíveis com o seu carregarFoto: 'foto-v'/'foto-p' ou 'img-v'/'img-p'
+                const idImg = (l === 'vermelho') ? 'foto-v' : 'foto-p'; 
+                const idIcon = (l === 'vermelho') ? 'icon-v' : 'icon-p';
+                
+                const imgElement = document.getElementById(idImg);
+                const iconElement = document.getElementById(idIcon);
+
+                if (imgElement && imgElement.src !== fotos[l]) {
+                    imgElement.src = fotos[l];
+                    imgElement.style.display = 'block';
+                    if (iconElement) iconElement.style.display = 'none';
+                }
+            }
+        });
+    });
+
+    // 4. MONITOR DE STATUS DA CONEXÃO
     onValue(ref(db, ".info/connected"), (snap) => {
         if (snap.val() === true) {
             console.log("🟢 Conectado ao servidor");
@@ -623,29 +651,6 @@ function iniciarMonitoramentoOnline() {
         }
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -694,7 +699,7 @@ window.salvarNoFirebase = (novoTurno = turno) => {
 
     set(gameRef, {
         mapa,
-        turno: novoTurno, // 🔥 envia já o próximo turno
+        turno: novoTurno,
         capturasV,
         capturasP,
         ts: Date.now()
@@ -702,8 +707,10 @@ window.salvarNoFirebase = (novoTurno = turno) => {
 
 };
 
+ // 🟢 função reiniciar
+ 
 window.reiniciar = () => {
-    // 1. Resetar variáveis de estado
+
     mapa = [
         [0, 2, 0, 2, 0, 2, 0, 2], 
         [2, 0, 2, 0, 2, 0, 2, 0], 
@@ -718,21 +725,39 @@ window.reiniciar = () => {
     capturasV = 0; 
     capturasP = 0; 
     selecionada = null;
+    jogoIniciado = true; // Garante que o estado do jogo esteja ativo
 
     // 2. Limpar UI e Modais
     const telaVitoria = document.getElementById('tela-vitoria');
     if (telaVitoria) {
         telaVitoria.classList.remove('ativo');
-        telaVitoria.style.display = 'none'; // Garante que o display reset
+        telaVitoria.style.display = 'none'; 
     }
 
     // 3. Atualizar o tabuleiro e placares
     desenhar();
-    atualizarUI();
+    if (typeof atualizarUI === 'function') atualizarUI();
+    if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 
-    // 4. Sincronizar se estiver online
+    // 4. Sincronizar se estiver online (Apenas o mestre da sala/vermelho reseta o banco)
     if (modoJogo === 'online' && meuLado === 'vermelho') {
-    window.salvarNoFirebase();
+        if (typeof window.salvarNoFirebase === 'function') {
+            window.salvarNoFirebase(1); // Força o turno 1 no Firebase
+        }
+    }
+
+    // 5. 🔥 GATILHO PARA IA (CORREÇÃO)
+    // Se estiver no modo IA, verifica se o turno inicial (1) pertence à máquina
+    if (modoJogo === 'ia') {
+        const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
+        
+        if (turno === turnoIA) {
+            console.log("IA detectada para início de jogo. Aguardando delay...");
+            // O delay evita que a IA jogue antes da animação do modal fechar
+            setTimeout(() => {
+                if (typeof jogadaDaIA === 'function') jogadaDaIA();
+            }, 1200); 
+        }
     }
 };
 
@@ -845,27 +870,10 @@ function atualizarUI() {
     document.getElementById('box-preto').classList.toggle('turno-ativo-preto', turno === 2);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// 🟢 função clicar
 
 function clicar(r, c) {
 
-    // 🔒 CONTROLE ONLINE
     if (modoJogo === 'online') {
         // Define o ID numérico baseado no lado (Vermelho = 1, Preto = 2)
         const meuTurnoID = (meuLado === 'vermelho') ? 1 : (meuLado === 'preto' ? 2 : null);
@@ -884,10 +892,6 @@ function clicar(r, c) {
     }
 
     const valor = mapa[r][c];
-
-    // 🔴 LÓGICA DE DEFINIÇÃO DE TIME
-    // Valor 1 e 3 = Vermelhas (Normal e Dama)
-    // Valor 2 e 4 = Pretas (Normal e Dama)
     const ehVezDoVermelho = (turno === 1 && (valor === 1 || valor === 3));
     const ehVezDoPreto    = (turno === 2 && (valor === 2 || valor === 4));
 
@@ -918,26 +922,11 @@ function clicar(r, c) {
         return;
     }
 
-    // 👉 PASSO 2: MOVIMENTO (Se já houver uma peça selecionada e clicar em casa vazia)
     if (selecionada && valor === 0) {
         console.log(`Tentando mover para: R${r} C${c}`);
         validarEMover(r, c);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Auxiliar para detectar se há capturas disponíveis para uma peça específica (Combo)
 function buscarCapturasDisponiveis(r, c, j) {
@@ -978,26 +967,10 @@ window.mostrarAvisoCaptura = function() {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// 🟢 TRAVA ONLINE
 
 function validarEMover(r, c) {
 
-    // 🔒 TRAVA ONLINE
     // Impede movimentos se o modo for online mas o oponente ainda não entrou
     if (modoJogo === 'online' && !jogoIniciado) {
         if (typeof window.exibirFeedback === 'function') {
@@ -1023,7 +996,6 @@ function validarEMover(r, c) {
     if (!movValido) return;
 
     // ⚠️ REGRA DA CAPTURA OBRIGATÓRIA (Lei do "Sopro")
-    // Se existe alguma captura possível no tabuleiro e o movimento escolhido não é de captura
     if (temCapturaNoTabuleiro && !movValido.cap) {
         if (typeof window.mostrarAvisoCaptura === 'function') {
             window.mostrarAvisoCaptura();
@@ -1083,12 +1055,11 @@ function validarEMover(r, c) {
         const novoTurno = (turno === 1 ? 2 : 1);
 
         // 🔥 SALVA NO FIREBASE (MODO ONLINE)
-        // Passamos o novoTurno para garantir que o banco de dados receba a vez do oponente
         if (modoJogo === 'online') {
             if (typeof salvarNoFirebase === 'function') {
                 salvarNoFirebase(novoTurno);
             } else {
-                // Caso a função salvarNoFirebase não esteja no escopo global
+
                 set(gameRef, {
                     mapa: mapa,
                     turno: novoTurno,
@@ -1099,7 +1070,6 @@ function validarEMover(r, c) {
             }
         }
 
-        // 🔥 ATUALIZA TURNO LOCAL
         turno = novoTurno;
 
         if (typeof verificarFimDeJogo === 'function') {
@@ -1121,16 +1091,6 @@ function validarEMover(r, c) {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
@@ -1296,23 +1256,28 @@ function obterJogadasValidasObrigatorias(mapa, turno) {
     return capturas.length > 0 ? capturas : todas;
 }
 
-// --- IA AVANÇADA CORRIGIDA (SEM ERRO DE COMBO) ---
+// --- 🟢 IA AVANÇADA COM SUPORTE A COMBO ---
 async function jogadaDaIA() {
     const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
     if (turno !== turnoIA || modoJogo !== 'ia') return;
 
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 2000));
 
-    // 🔥 AQUI ESTÁ A CORREÇÃO PRINCIPAL
     const jogadasValidas = obterJogadasValidasObrigatorias(mapa, turnoIA);
 
     if (jogadasValidas.length === 0) return;
+    let movimentosPossiveis = jogadasValidas;
+    if (selecionada) {
+        movimentosPossiveis = jogadasValidas.filter(m => 
+            m.de.r === selecionada.r && m.de.c === selecionada.c
+        );
+    }
 
     let melhorJogada = null;
     let melhorValor = -Infinity;
-    const profundidade = 4; // ajuste se quiser
+    const profundidade = 4;
 
-    for (const mv of jogadasValidas) {
+    for (const mv of movimentosPossiveis) {
         const copia = JSON.parse(JSON.stringify(mapa));
         aplicarMovimentoSimulado(copia, mv, turnoIA);
 
@@ -1334,8 +1299,15 @@ async function jogadaDaIA() {
 
     if (melhorJogada) {
         selecionada = melhorJogada.de;
+        
+        // Executa o movimento
         validarEMover(melhorJogada.para.r, melhorJogada.para.c);
         desenhar();
+
+        // LOGICA DE COMBO:
+        if (selecionada) {
+            setTimeout(jogadaDaIA, 600);
+        }
     }
 }
 
@@ -1373,6 +1345,38 @@ function exibirModalVitoria(vencedor) {
         }, 10);
     }
 }
+
+
+// Função para sair do jogo
+
+window.sairDoJogo = async function() {
+    if (modoJogo === 'online') {
+        const confirmacao = confirm("Deseja realmente sair da partida? Isso encerrará o jogo para ambos.");
+        if (!confirmacao) return;
+
+        try {
+            // Importar o 'remove' do database se necessário
+            const { remove } = await import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js");
+
+            // 1. Exibe o feedback local antes de sair
+            const meuNome = document.getElementById(`input-nome-${meuLado === 'vermelho' ? 'v' : 'p'}`).value;
+            exibirAlertaSaida(meuNome || "Você");
+
+            // 2. Remove os dados da partida no Firebase
+            // Apagar 'partida_unica' reinicia o jogo para todos os conectados
+            await remove(ref(db, 'partida_unica'));
+
+            console.log("Partida encerrada e dados removidos.");
+        } catch (error) {
+            console.error("Erro ao sair do jogo:", error);
+        }
+    }
+
+    // Redireciona para a tela inicial ou recarrega a página após um curto delay
+    setTimeout(() => {
+        window.location.reload(); 
+    }, 2000);
+};
 
 function obterTodosMvs(m, j) {
     let res = [];
