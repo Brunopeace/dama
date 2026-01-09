@@ -19,6 +19,23 @@ body {
     overflow-x: hidden;
 }
 
+.btn-sair {
+    background: rgba(255, 255, 255, 0.1); /* Fundo branco com 10% de opacidade */
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease; /* Suaviza o efeito ao passar o mouse */
+    font-weight: bold;
+    width: 80px;
+}
+
+.btn-sair:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
 /* Container principal */
 #game-layout {
     display: flex;
