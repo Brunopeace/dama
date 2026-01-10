@@ -619,6 +619,44 @@ body.visao-preto .centro {
     
 }
 
+/* Estilo base da bolinha (Offline) */
+.status-dot-placar {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #ff0000; /* Cinza quando estável/offline */
+    display: none; /* O JS controla a exibição */
+    transition: all 0.3s ease;
+}
+
+/* Estilo Online com Animação */
+.status-dot-placar.online {
+    background-color: #00ff00 !important; /* Verde neon */
+    display: inline-block;
+    box-shadow: 0 0 8px #00ff00;
+    /* Aplica a animação: nome, duração, repetição infinita */
+    animation: pulsarStatus 1.5s infinite ease-in-out;
+}
+
+/* Definição da Animação */
+@keyframes pulsarStatus {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 5px #00ff00;
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2); /* Aumenta levemente */
+        box-shadow: 0 0 15px #00ff00; /* Brilho expande */
+        opacity: 0.8; /* Fica levemente transparente */
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 5px #00ff00;
+        opacity: 1;
+    }
+}
+
 /* AVATAR UPLOAD PROFISSIONAL */
 .avatar-upload {
     width: 50px;
