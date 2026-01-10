@@ -39,6 +39,26 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Variável para comparar o estado anterior (coloque fora da função onValue)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
@@ -84,7 +104,7 @@ onValue(playersRef, (snap) => {
     const totalJogadores = Object.keys(jogadoresAtuais).length;
     
     // Atualiza os pontinhos verde/cinza no placar
-    atualizarIndicadoresStatus(jogadoresAtuais);
+ //   atualizarIndicadoresStatus(jogadoresAtuais);
 
     if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
     if (!jogoIniciado) {
@@ -114,7 +134,7 @@ function notificarEntrada(lado) {
 }
 
 // Função auxiliar para atualizar as bolinhas de status
-function atualizarIndicadoresStatus(jogadores) {
+/* function atualizarIndicadoresStatus(jogadores) {
     const statusV = document.getElementById('ponto-status-v'); // Crie esses IDs no HTML
     const statusP = document.getElementById('ponto-status-p');
     const textoV = document.getElementById('texto-status-v');
@@ -138,6 +158,10 @@ function atualizarIndicadoresStatus(jogadores) {
         if (textoP) textoP.innerText = "Aguardando...";
     }
 }
+
+
+*/
+
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -709,51 +733,58 @@ function iniciarMonitoramentoOnline() {
 // nova função
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Garante que apareces para os outros)
+// 1. Registrar presença (Garante que você apareça online para os outros)
 window.registrarPresenca = (nome) => {
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     set(minhaPresencaRef, { online: true, nome: nome });
     
-    // Remove do Firebase se a aba for fechada
+    // Configura para remover do Firebase se a aba for fechada ou conexão cair
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
 };
 
-// 2. Monitorizar quem está online e atualizar a UI
+// 2. Monitorar quem está online e atualizar a UI (Placar + Painel Lateral)
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes atuais nos placares (os valores escritos nos inputs)
+    // Nomes atuais que estão escritos nos campos do placar
     const nomeV = document.getElementById('input-nome-v')?.value;
     const nomeP = document.getElementById('input-nome-p')?.value;
     
-    const dotV = document.getElementById('status-v');
-    const dotP = document.getElementById('status-p');
+    // Usando os IDs corretos encontrados no seu arquivo script.js
+    const dotV = document.getElementById('ponto-status-v');
+    const dotP = document.getElementById('ponto-status-p');
+    const textoV = document.getElementById('texto-status-v');
+    const textoP = document.getElementById('texto-status-p');
 
     // --- LÓGICA PARA A BOLINHA VERMELHA ---
     if (dotV) {
         // CONDIÇÃO: Eu só vejo a bolinha vermelha se eu for o PRETO 
-        // E se o nome que está no campo vermelho constar na lista de online
+        // E se o nome do jogador vermelho estiver na lista de usuários online
         if (meuLado === 'preto' && nomeV && jogadoresOnline[nomeV]) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
+            if (textoV) textoV.innerText = "Online";
         } else {
-            // Se eu for o vermelho, ou se o oponente estiver offline, esconde
+            // Esconde se for eu ou se o oponente estiver offline
             dotV.style.display = "none";
+            if (textoV && meuLado === 'preto') textoV.innerText = "Aguardando...";
         }
     }
 
     // --- LÓGICA PARA A BOLINHA PRETA ---
     if (dotP) {
         // CONDIÇÃO: Eu só vejo a bolinha preta se eu for o VERMELHO
-        // E se o nome que está no campo preto constar na lista de online
+        // E se o nome do jogador preto estiver na lista de usuários online
         if (meuLado === 'vermelho' && nomeP && jogadoresOnline[nomeP]) {
             dotP.style.display = "inline-block";
             dotP.classList.add('online');
+            if (textoP) textoP.innerText = "Online";
         } else {
-            // Se eu for o preto, ou se o oponente estiver offline, esconde
+            // Esconde se for eu ou se o oponente estiver offline
             dotP.style.display = "none";
+            if (textoP && meuLado === 'vermelho') textoP.innerText = "Aguardando...";
         }
     }
 
@@ -762,6 +793,7 @@ onValue(listaJogadoresRef, (snapshot) => {
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
+            // Não mostra você mesmo na lista lateral de amigos
             if (meuNome && nome === meuNome) continue; 
 
             const li = document.createElement('li');
@@ -777,6 +809,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
