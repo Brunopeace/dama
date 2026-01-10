@@ -7,6 +7,9 @@
     <link rel="icon" href="img/icon-512.png">
     <link rel="stylesheet" type="text/css" href="css/styles.css">
     <link rel="manifest" href="manifest.json">
+    
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
 </head>
 <body>
     <div id="pwa-install-container" style="display: none;">
@@ -79,8 +82,34 @@
                     <img id="img-preto">
                     <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
                 </div>
-                <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">
-                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+                <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">               
+                <button id="btn-mic" class="btn-emoji-trigger" onclick="toggleAudio()">
+    <span id="mic-icon">🎤</span>
+</button>
+<audio id="remote-audio" autoplay></audio>
+<button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
             </div>
             <div class="pontuacao">
                 <span class="count-label">Preto </span>
@@ -105,7 +134,10 @@
                     <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
                 </div>
                 <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" onchange="alterarNome('v')">
-                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>
+                 <span id="mic-icon">🎤</span>
+</button>
+<audio id="remote-audio" autoplay></audio><button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>
+                
             </div>
             <div class="pontuacao">
                 <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
@@ -149,7 +181,7 @@
         
         <div class="acoes-modal">
             <button class="btn-reiniciar-primario" onclick="reiniciar()">
-                <span class="icon">🔄</span> JOGAR NOVAMENTE
+                <span class="icon">🔄</span> JOGAR NOVAMENTE ?
             </button>
 <button class="btn-voltar-menu" onclick="encerrarPartida()">
     SAIR
