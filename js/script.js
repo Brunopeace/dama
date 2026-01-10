@@ -798,12 +798,11 @@ onValue(listaJogadoresRef, (snapshot) => {
     // --- LÓGICA PARA O LADO VERMELHO ---
     if (dotV) {
         // CONDIÇÃO: Eu sou o PRETO e o nome do VERMELHO está na lista de online
-        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho]) {
+        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho.trim()]) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
-            // Se eu sou o Vermelho, eu não vejo minha própria bolinha
-            // Se o oponente não estiver na lista, a bolinha some
+                
             dotV.style.display = "none";
             dotV.classList.remove('online');
         }
