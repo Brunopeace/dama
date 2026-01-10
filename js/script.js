@@ -753,58 +753,23 @@ function iniciarMonitoramentoOnline() {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-// nova função
-// --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
-
+            
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Faz você aparecer online para os outros)
-window.registrarPresenca = (nome) => {
-    if (!nome) return;
-    
-    // Usamos o nome original para exibir, mas a chave do banco será minúscula para evitar erros
-    const nomeKey = nome.trim().toLowerCase();
-    const minhaPresencaRef = ref(db, `usuarios_online/${nomeKey}`);
-    
-    // Salva o status
-    set(minhaPresencaRef, { 
-        online: true, 
-        nome: nome.trim(), // Nome bonitinho para aparecer na lista
-        ultimaAtualizacao: Date.now() 
-    });
-    
-    // Remove do Firebase ao fechar a aba ou cair a rede
-    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-        pkg.onDisconnect(minhaPresencaRef).remove();
-    });
-};
+// Função auxiliar para validar as bolinhas (Centralizada)
+const atualizarBolinhasStatus = (jogadoresOnline) => {
+    if (!jogadoresOnline) return;
 
-// 2. Monitorar a lista global e atualizar apenas o status do OPONENTE
-onValue(listaJogadoresRef, (snapshot) => {
-    const jogadoresOnline = snapshot.val() || {};
-    
-    // Pegamos os nomes atuais dos inputs e limpamos espaços/letras grandes
+    // Pegamos os nomes atuais dos inputs do placar
     const nomeVermelho = document.getElementById('input-nome-v')?.value?.trim().toLowerCase();
     const nomePreto = document.getElementById('input-nome-p')?.value?.trim().toLowerCase();
     
-    // Elementos das bolinhas
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O LADO VERMELHO (Quem vê é o Preto) ---
+    // LÓGICA VERMELHO (Quem vê é o Preto)
     if (dotV) {
         if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho]) {
             dotV.style.display = "inline-block";
@@ -815,7 +780,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 
-    // --- LÓGICA PARA O LADO PRETO (Quem vê é o Vermelho) ---
+    // LÓGICA PRETO (Quem vê é o Vermelho)
     if (dotP) {
         if (meuLado === 'vermelho' && nomePreto && jogadoresOnline[nomePreto]) {
             dotP.style.display = "inline-block";
@@ -825,17 +790,39 @@ onValue(listaJogadoresRef, (snapshot) => {
             dotP.classList.remove('online');
         }
     }
+};
 
-    // --- PARTE B: ATUALIZAR LISTA LATERAL DE AMIGOS ---
+// 1. Registrar presença (Faz você aparecer online para os outros)
+window.registrarPresenca = (nome) => {
+    if (!nome) return;
+    const nomeKey = nome.trim().toLowerCase();
+    const minhaPresencaRef = ref(db, `usuarios_online/${nomeKey}`);
+    
+    set(minhaPresencaRef, { 
+        online: true, 
+        nome: nome.trim(),
+        ultimaAtualizacao: Date.now() 
+    });
+    
+    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+        pkg.onDisconnect(minhaPresencaRef).remove();
+    });
+};
+
+// 2. Monitorar a lista global
+onValue(listaJogadoresRef, (snapshot) => {
+    const jogadoresOnline = snapshot.val() || {};
+    
+    // Atualiza as bolinhas no placar
+    atualizarBolinhasStatus(jogadoresOnline);
+
+    // Atualiza a lista lateral de amigos
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
         const meuNomeMinusculo = meuNome ? meuNome.toLowerCase() : "";
-
         for (let chave in jogadoresOnline) {
-            // Se a chave (nome em minúsculo) for igual ao meu, pula
             if (chave === meuNomeMinusculo) continue; 
-
             const dados = jogadoresOnline[chave];
             const li = document.createElement('li');
             li.className = 'jogador-item';
@@ -850,6 +837,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
