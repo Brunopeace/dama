@@ -738,77 +738,72 @@ window.registrarPresenca = (nome) => {
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     set(minhaPresencaRef, { online: true, nome: nome });
     
-    // Configura para remover do Firebase se a aba for fechada ou conexão cair
+    // Remove do Firebase se a aba for fechada
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
 };
 
-// 2. Monitorar quem está online e atualizar a UI (Placar + Painel Lateral)
+// 2. Monitorar quem está online e atualizar a UI
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes atuais que estão escritos nos campos do placar
+    // Nomes que estão escritos nos inputs do placar
     const nomeV = document.getElementById('input-nome-v')?.value;
     const nomeP = document.getElementById('input-nome-p')?.value;
     
-    // Usando os IDs corretos encontrados no seu arquivo script.js
+    // IDs EXATOS que estão no seu HTML/CSS original
     const dotV = document.getElementById('ponto-status-v');
     const dotP = document.getElementById('ponto-status-p');
     const textoV = document.getElementById('texto-status-v');
     const textoP = document.getElementById('texto-status-p');
 
-    // --- LÓGICA PARA A BOLINHA VERMELHA ---
+    // --- LÓGICA PARA O LADO VERMELHO ---
     if (dotV) {
-        // CONDIÇÃO: Eu só vejo a bolinha vermelha se eu for o PRETO 
-        // E se o nome do jogador vermelho estiver na lista de usuários online
+        // Se eu sou PRETO, eu vigio o VERMELHO
         if (meuLado === 'preto' && nomeV && jogadoresOnline[nomeV]) {
             dotV.style.display = "inline-block";
-            dotV.classList.add('online');
+            dotV.style.backgroundColor = "#00ff00"; // Força a cor verde
             if (textoV) textoV.innerText = "Online";
         } else {
-            // Esconde se for eu ou se o oponente estiver offline
             dotV.style.display = "none";
             if (textoV && meuLado === 'preto') textoV.innerText = "Aguardando...";
         }
     }
 
-    // --- LÓGICA PARA A BOLINHA PRETA ---
+    // --- LÓGICA PARA O LADO PRETO ---
     if (dotP) {
-        // CONDIÇÃO: Eu só vejo a bolinha preta se eu for o VERMELHO
-        // E se o nome do jogador preto estiver na lista de usuários online
+        // Se eu sou VERMELHO, eu vigio o PRETO
         if (meuLado === 'vermelho' && nomeP && jogadoresOnline[nomeP]) {
             dotP.style.display = "inline-block";
-            dotP.classList.add('online');
+            dotP.style.backgroundColor = "#00ff00"; // Força a cor verde
             if (textoP) textoP.innerText = "Online";
         } else {
-            // Esconde se for eu ou se o oponente estiver offline
             dotP.style.display = "none";
             if (textoP && meuLado === 'vermelho') textoP.innerText = "Aguardando...";
         }
     }
 
-    // --- PARTE B: Atualizar o Painel Lateral de Amigos ---
+    // --- PAINEL LATERAL ---
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
-            // Não mostra você mesmo na lista lateral de amigos
             if (meuNome && nome === meuNome) continue; 
-
             const li = document.createElement('li');
             li.className = 'jogador-item';
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="status-dot online"></span>
+                    <span class="status-dot online" style="background-color: #00ff00; width: 10px; height: 10px; border-radius: 50%;"></span>
                     <span>${nome}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')">CONVIDAR</button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')" style="margin-left:10px">CONVIDAR</button>
             `;
             listaUl.appendChild(li);
         }
     }
 });
+
 
 
 
