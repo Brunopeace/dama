@@ -733,12 +733,11 @@ function iniciarMonitoramentoOnline() {
 // nova função
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Garante que você apareça online para os outros)
+// 1. Registrar presença (Garante que você apareça para os outros)
 window.registrarPresenca = (nome) => {
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     set(minhaPresencaRef, { online: true, nome: nome });
     
-    // Remove do Firebase se a aba for fechada
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
@@ -748,43 +747,37 @@ window.registrarPresenca = (nome) => {
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes que estão escritos nos inputs do placar
+    // Nomes atuais nos placares
     const nomeV = document.getElementById('input-nome-v')?.value;
     const nomeP = document.getElementById('input-nome-p')?.value;
     
-    // IDs EXATOS que estão no seu HTML/CSS original
-    const dotV = document.getElementById('ponto-status-v');
-    const dotP = document.getElementById('ponto-status-p');
-    const textoV = document.getElementById('texto-status-v');
-    const textoP = document.getElementById('texto-status-p');
+    // IDs que você colocou no seu HTML
+    const dotV = document.getElementById('status-v');
+    const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O LADO VERMELHO ---
+    // --- LÓGICA PARA O JOGADOR VERMELHO ---
     if (dotV) {
-        // Se eu sou PRETO, eu vigio o VERMELHO
+        // Mostra a bolinha do oponente se eu sou o PRETO e ele está online
         if (meuLado === 'preto' && nomeV && jogadoresOnline[nomeV]) {
             dotV.style.display = "inline-block";
-            dotV.style.backgroundColor = "#00ff00"; // Força a cor verde
-            if (textoV) textoV.innerText = "Online";
+            dotV.classList.add('online');
         } else {
             dotV.style.display = "none";
-            if (textoV && meuLado === 'preto') textoV.innerText = "Aguardando...";
         }
     }
 
-    // --- LÓGICA PARA O LADO PRETO ---
+    // --- LÓGICA PARA O JOGADOR PRETO ---
     if (dotP) {
-        // Se eu sou VERMELHO, eu vigio o PRETO
+        // Mostra a bolinha do oponente se eu sou o VERMELHO e ele está online
         if (meuLado === 'vermelho' && nomeP && jogadoresOnline[nomeP]) {
             dotP.style.display = "inline-block";
-            dotP.style.backgroundColor = "#00ff00"; // Força a cor verde
-            if (textoP) textoP.innerText = "Online";
+            dotP.classList.add('online');
         } else {
             dotP.style.display = "none";
-            if (textoP && meuLado === 'vermelho') textoP.innerText = "Aguardando...";
         }
     }
 
-    // --- PAINEL LATERAL ---
+    // --- ATUALIZAR LISTA LATERAL ---
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
@@ -794,15 +787,16 @@ onValue(listaJogadoresRef, (snapshot) => {
             li.className = 'jogador-item';
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="status-dot online" style="background-color: #00ff00; width: 10px; height: 10px; border-radius: 50%;"></span>
+                    <span class="status-dot online"></span>
                     <span>${nome}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')" style="margin-left:10px">CONVIDAR</button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')">CONVIDAR</button>
             `;
             listaUl.appendChild(li);
         }
     }
 });
+
 
 
 
