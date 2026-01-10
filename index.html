@@ -70,6 +70,7 @@
     <div id="game-layout">
     <div class="placar-container" id="container-topo">
         <div id="box-preto" class="count-box">
+            
             <span class="badge-vez">Sua Vez</span>
             <div class="info-jogador">
                 <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
@@ -94,6 +95,7 @@
 
     <div class="placar-container" id="container-base">
         <div id="box-vermelho" class="count-box">
+            
             <span class="badge-vez badge-vermelha">Sua Vez</span>
             <div class="info-jogador">
                 <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
@@ -127,10 +129,30 @@
             <div style="font-size: 50px; margin-bottom: 10px;">🏆</div>
             <h2 id="vencedor-texto">VITÓRIA!</h2>
             <p class="vitoria-subtexto">Partida encerrada com sucesso.</p>
-            <button class="btn-novo-jogo" onclick="reiniciar()">JOGAR NOVAMENTE</button>
+            <button class="btn-novo-jogo" onclick="reiniciar()">JOGAR NOVAMENTE ?</button>
         </div>
     </div>
-
+    
+    <div id="tela-derrota" class="modal-perdeu-overlay" style="display: none;">
+    <div class="card-perdeu-nativo">
+        <div class="status-badge">PARTIDA ENCERRADA</div>
+        
+        <div class="emoji-main">😭</div>
+        
+        <h2 class="titulo-perdeu">VOCÊ PERDEU</h2>
+        <p class="texto-perdeu">Não foi dessa vez!<br>Seu adversário foi melhor.</p>
+        
+        <div class="acoes-modal">
+            <button class="btn-reiniciar-primario" onclick="reiniciar()">
+                <span class="icon">🔄</span> JOGAR NOVAMENTE
+            </button>
+            <button class="btn-voltar-menu" onclick="window.location.reload()">
+                SAIR
+            </button>
+        </div>
+    </div>
+</div>
+    
     <script src="js/script.js" type="module"></script>
 </body>
 </html>
