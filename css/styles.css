@@ -614,8 +614,9 @@ body.visao-preto .centro {
 
 /* Classe que será ativada via JavaScript */
 .status-dot-placar.online {
-    background-color: #00ff00; /* Verde neon */
+    background-color: #00ff00 !important; /* Verde neon */
     box-shadow: 0 0 8px #00ff00;
+    
 }
 
 /* AVATAR UPLOAD PROFISSIONAL */
