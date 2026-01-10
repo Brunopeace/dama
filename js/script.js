@@ -631,6 +631,7 @@ function iniciarMonitoramentoFotos() {
 }
 
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
+// --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
@@ -647,6 +648,30 @@ function iniciarMonitoramentoOnline() {
             partidaConfirmada = true; 
         }
 
+        // 🟢 LÓGICA DE ATUALIZAÇÃO DE NOMES
+        Object.keys(nomesAtuais).forEach(lado => {
+            if (temporizadoresSaida[lado]) {
+                clearTimeout(temporizadoresSaida[lado]);
+                delete temporizadoresSaida[lado];
+            }
+            const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+            const campo = document.getElementById(idCampo);
+            if (campo && nomesAtuais[lado]) {
+                campo.value = nomesAtuais[lado];
+            }
+        });
+
+        // 🔥 NOVO GATILHO: ATUALIZAÇÃO DAS BOLINHAS DE STATUS
+        // Quando os nomes da partida carregam, forçamos a busca na lista global de presença
+        import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+            const presenceRef = pkg.ref(db, 'usuarios_online');
+            pkg.get(presenceRef).then((snapshotOnline) => {
+                if (typeof atualizarBolinhasStatus === 'function') {
+                    atualizarBolinhasStatus(snapshotOnline.val());
+                }
+            });
+        });
+
         // 🔴 LÓGICA DE SAÍDA REAL (DISPARA SE O NOME SUMIR DO BANCO)
         Object.keys(nomesAnteriores).forEach(lado => {
             const existiaAntes = nomesAnteriores[lado];
@@ -661,10 +686,8 @@ function iniciarMonitoramentoOnline() {
 
                 temporizadoresSaida[ladoQueSumiu] = setTimeout(() => {
                     if (!nomesAtuais[ladoQueSumiu]) {
-                        // Alerta apenas se o jogador realmente não voltou em 2 segundos
                         if (typeof exibirAlertaSaida === 'function') exibirAlertaSaida(nomeQueSumiu);
                         
-                        // Se a partida já estava rolando, recarrega após alguém sair permanentemente
                         if (partidaConfirmada) {
                             setTimeout(() => window.location.reload(), 3000);
                         } else {
@@ -674,35 +697,26 @@ function iniciarMonitoramentoOnline() {
                         const idCampoOponente = (ladoQueSumiu === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
                         const campo = document.getElementById(idCampoOponente);
                         if (campo) campo.value = "Aguardando...";
+                        
+                        // Esconde a bolinha se o oponente saiu
+                        const dotId = (ladoQueSumiu === 'vermelho') ? 'status-v' : 'status-p';
+                        const dot = document.getElementById(dotId);
+                        if (dot) dot.style.display = "none";
                     }
                     delete temporizadoresSaida[ladoQueSumiu];
                 }, 2000);
             }
         });
 
-        // 🟢 LÓGICA DE ATUALIZAÇÃO DE NOMES
-        Object.keys(nomesAtuais).forEach(lado => {
-            if (temporizadoresSaida[lado]) {
-                clearTimeout(temporizadoresSaida[lado]);
-                delete temporizadoresSaida[lado];
-            }
-            const idCampo = (lado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
-            const campo = document.getElementById(idCampo);
-            if (campo && nomesAtuais[lado]) campo.value = nomesAtuais[lado];
-        });
-
         nomesAnteriores = { ...nomesAtuais };
     });
-    
+       
     // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (SOMENTE MOVIMENTOS)
     onValue(ref(db, 'partida_unica'), (snapshot) => {
         if (modoJogo !== 'online' || !snapshot.exists()) return;
         
         const data = snapshot.val();
-        // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
         if (!data || !data.mapa) return;
-
-        // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
         if (selecionada !== null) return;
 
         mapa = data.mapa;
@@ -714,7 +728,7 @@ function iniciarMonitoramentoOnline() {
         console.log("🔄 Tabuleiro sincronizado via rede.");
     });
 
-    // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (IDs DO SEU HTML: img-vermelho, img-preto)
+    // 3. SINCRONIZAÇÃO DE FOTOS
     onValue(ref(db, 'partida_unica/fotos'), (snap) => {
         if (modoJogo !== 'online') return;
         const fotos = snap.val() || {};
@@ -753,25 +767,31 @@ function iniciarMonitoramentoOnline() {
 
 
 
+
             
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
+// --- SISTEMA DE STATUS ONLINE (VERSÃO FINAL PARA PWA/MOBILE) ---
+
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// Função auxiliar para validar as bolinhas (Centralizada)
+// Função central de atualização de bolinhas
 const atualizarBolinhasStatus = (jogadoresOnline) => {
     if (!jogadoresOnline) return;
 
-    // Pegamos os nomes atuais dos inputs do placar
-    const nomeVermelho = document.getElementById('input-nome-v')?.value?.trim().toLowerCase();
-    const nomePreto = document.getElementById('input-nome-p')?.value?.trim().toLowerCase();
+    // 1. Pegamos os nomes, removemos espaços e deixamos tudo em minúsculo
+    const nomeV = document.getElementById('input-nome-v')?.value?.trim().toLowerCase();
+    const nomeP = document.getElementById('input-nome-p')?.value?.trim().toLowerCase();
     
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
+    // 2. Criamos um conjunto de chaves online (também normalizadas)
+    const chavesOnline = Object.keys(jogadoresOnline);
+
     // LÓGICA VERMELHO (Quem vê é o Preto)
     if (dotV) {
-        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho]) {
+        if (meuLado === 'preto' && nomeV && chavesOnline.includes(nomeV)) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
@@ -782,7 +802,7 @@ const atualizarBolinhasStatus = (jogadoresOnline) => {
 
     // LÓGICA PRETO (Quem vê é o Vermelho)
     if (dotP) {
-        if (meuLado === 'vermelho' && nomePreto && jogadoresOnline[nomePreto]) {
+        if (meuLado === 'vermelho' && nomeP && chavesOnline.includes(nomeP)) {
             dotP.style.display = "inline-block";
             dotP.classList.add('online');
         } else {
@@ -792,16 +812,18 @@ const atualizarBolinhasStatus = (jogadoresOnline) => {
     }
 };
 
-// 1. Registrar presença (Faz você aparecer online para os outros)
+// 1. Registrar presença (Garante compatibilidade com teclado de celular)
 window.registrarPresenca = (nome) => {
     if (!nome) return;
-    const nomeKey = nome.trim().toLowerCase();
-    const minhaPresencaRef = ref(db, `usuarios_online/${nomeKey}`);
+    
+    // Normaliza o nome antes de salvar no banco
+    const nomeNormalizado = nome.trim().toLowerCase();
+    const minhaPresencaRef = ref(db, `usuarios_online/${nomeNormalizado}`);
     
     set(minhaPresencaRef, { 
         online: true, 
-        nome: nome.trim(),
-        ultimaAtualizacao: Date.now() 
+        nomeExibicao: nome.trim(), // Nome original com maiúsculas para a lista lateral
+        timestamp: Date.now() 
     });
     
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
@@ -809,34 +831,35 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-// 2. Monitorar a lista global
+// 2. Ouvinte principal do Firebase
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
-    
-    // Atualiza as bolinhas no placar
     atualizarBolinhasStatus(jogadoresOnline);
 
-    // Atualiza a lista lateral de amigos
+    // Atualiza lista lateral
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
-        const meuNomeMinusculo = meuNome ? meuNome.toLowerCase() : "";
+        const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
         for (let chave in jogadoresOnline) {
-            if (chave === meuNomeMinusculo) continue; 
+            if (chave === meuNomeRef) continue; 
             const dados = jogadoresOnline[chave];
             const li = document.createElement('li');
             li.className = 'jogador-item';
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot online"></span>
-                    <span>${dados.nome}</span>
+                    <span>${dados.nomeExibicao || chave}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nome}')">CONVIDAR</button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
             `;
             listaUl.appendChild(li);
         }
     }
 });
+// ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
+
+
 
 
 
