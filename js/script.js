@@ -4,8 +4,8 @@ import {
     ref, 
     set, 
     onValue, 
-    update, // 👈 Adicione isso aqui
-    remove  // 👈 Recomendo adicionar também para funções de sair/limpar
+    update,
+    remove
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
 // --- CONFIGURAÇÃO FIREBASE ---
@@ -23,23 +23,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-
 // 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
-
-// ATUALIZE o ouvinte do Firebase para o oponente ver o emoji
-onValue(emojiRef, (snap) => {
-    const data = snap.val();
-    if (data && data.lado !== meuLado) {
-        // Se o timestamp for recente (menos de 2 segundos), mostra o emoji
-        if (Date.now() - data.timestamp < 2000) {
-            dispararEfeitoEmoji(data.emoji, data.lado);
-        }
-    }
-});
 
 // Monitor de nomes
 onValue(nomesRef, (snap) => {
@@ -151,67 +139,26 @@ function atualizarIndicadoresStatus(jogadores) {
     }
 }
 
-
-
-
-
-
-// 0901-1
-
-// Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
+// ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
     if (modoJogo !== 'online') return;
-    
-    // ✅ REMOVIDO: A verificação de snapshot.exists() com alerta de saída.
-    // Agora o monitor apenas ignora se os dados estiverem temporariamente ausentes
     if (!snapshot.exists()) return;
 
     const data = snapshot.val();
     
-    // Verifica se os dados do mapa existem antes de prosseguir
     if (!data || !data.mapa) return;
-
-    // A TRAVA: Se você estiver com uma peça selecionada (na mão), 
-    // não sobrescrevemos o seu mapa para evitar que a peça "fuja" da sua mão
     if (selecionada !== null) return;
 
-    // Atualiza as variáveis globais com os dados vindos do oponente/banco
     mapa = data.mapa;
     turno = data.turno;
     capturasV = data.capturasV || 0;
     capturasP = data.capturasP || 0;
     
-    // Renderiza visualmente as mudanças
     desenhar();
     
     if (typeof atualizarUI === 'function') atualizarUI();
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
-
-    console.log("🔄 Tabuleiro sincronizado. Vez do jogador:", turno);
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
@@ -338,17 +285,6 @@ window.carregarFoto = function(event, imgId, iconId) {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
 window.alterarNome = function(lado) {
     // Só permite alterar o próprio nome no modo online
     const ladoLongo = lado === 'v' ? 'vermelho' : 'preto';
@@ -381,19 +317,39 @@ document.addEventListener('mousedown', (event) => {
 // ✅ emojis
 
 function exibirEmojiNaTela(emoji, lado) {
-    const boxId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
-    const box = document.getElementById(boxId);
-    if (!box) return;
     const el = document.createElement('div');
     el.className = 'float-emoji';
     el.innerText = emoji;
-    box.appendChild(el);
-    setTimeout(() => el.remove(), 2500);
+
+    // Aplicamos a animação baseada no lado de quem enviou
+    // Se for o jogador de baixo (vermelho), o emoji SOBE para o centro
+    // Se for o jogador de cima (preto), o emoji DESCE para o centro
+    if (lado === 'vermelho') {
+        el.classList.add('animar-subir');
+    } else {
+        el.classList.add('animar-descer');
+    }
+
+    document.body.appendChild(el);
+
+    // Remove do HTML após a animação acabar
+    setTimeout(() => {
+        el.remove();
+    }, 2000);
 }
 
+// --- OUVINTE ÚNICO DE EMOJIS ---
 onValue(emojiRef, (snap) => {
-    const d = snap.val();
-    if (d && d.ts > Date.now() - 3000) exibirEmojiNaTela(d.texto, d.lado);
+    const data = snap.val();
+    
+    if (data && data.ts && (Date.now() - data.ts < 3000)) {
+        
+        exibirEmojiNaTela(data.texto, data.lado);
+        
+        if (typeof dispararEfeitoEmoji === 'function') {
+            dispararEfeitoEmoji(data.texto, data.lado);
+        }
+    }
 });
 
 // --- LÓGICA DO JOGO ---
@@ -506,7 +462,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (selecaoLado) selecaoLado.style.display = 'none';
 
     desenhar();
-    console.log(`Cadastro confirmado: ${nomeDigitado} (${meuLado})`);
 
     // --- GATILHO INICIAL PARA IA ---
     if (modoJogo === 'ia') {
@@ -515,7 +470,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
         
         // Se o turno atual do tabuleiro coincidir com o da IA, ela começa
         if (turno === idTurnoIA) {
-            console.log("IA detectou que deve começar o jogo...");
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
             }, 1000); 
@@ -577,12 +531,6 @@ function iniciarMonitoramentoFotos() {
         }
     });
 }
-
-
-
-
-            // 0901-2
-
 
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 function iniciarMonitoramentoOnline() {
@@ -697,31 +645,6 @@ function iniciarMonitoramentoOnline() {
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
     const alerta = document.createElement('div');
@@ -777,7 +700,7 @@ window.salvarNoFirebase = (novoTurno = turno) => {
 
 };
 
- // 🟢 função reiniciar
+// 🟢 função reiniciar
  
 window.reiniciar = () => {
 
@@ -795,13 +718,18 @@ window.reiniciar = () => {
     capturasV = 0; 
     capturasP = 0; 
     selecionada = null;
-    jogoIniciado = true; // Garante que o estado do jogo esteja ativo
-
-    // 2. Limpar UI e Modais
+    jogoIniciado = true;
+   
     const telaVitoria = document.getElementById('tela-vitoria');
     if (telaVitoria) {
         telaVitoria.classList.remove('ativo');
         telaVitoria.style.display = 'none'; 
+    }
+    
+    const telaDerrota = document.getElementById('tela-derrota');
+    if (telaDerrota) {
+    telaDerrota.classList.remove('ativo');
+    telaDerrota.style.display = 'none';
     }
 
     // 3. Atualizar o tabuleiro e placares
@@ -822,8 +750,6 @@ window.reiniciar = () => {
         const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
         
         if (turno === turnoIA) {
-            console.log("IA detectada para início de jogo. Aguardando delay...");
-            // O delay evita que a IA jogue antes da animação do modal fechar
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
             }, 1200); 
@@ -908,28 +834,30 @@ function dispararEfeitoEmoji(emoji, lado) {
 }
 
 window.enviarEmoji = function(emoji) {
-    // 1. FECHA O MODAL IMEDIATAMENTE (Tenta por ID e por Classe)
+    // 1. FECHA O MODAL IMEDIATAMENTE
     const modalEmoji = document.getElementById('modal-emoji-selecao');
     if (modalEmoji) {
-        modalEmoji.style.display = 'none'; // Garante o fechamento visual
-        modalEmoji.classList.remove('active'); // Remove classe em inglês
-        modalEmoji.classList.remove('ativo');  // Remove classe em português
-        modalEmoji.classList.remove('show');   // Por segurança
+        modalEmoji.style.display = 'none';
+        modalEmoji.classList.remove('ativo', 'active', 'show');
     }
 
-    // 2. EFEITO VISUAL (O emoji subindo no tabuleiro)
-    if (typeof dispararEfeitoEmoji === 'function') {
-        dispararEfeitoEmoji(emoji, meuLado);
+    // 2. VERIFICA SE O LADO ESTÁ DEFINIDO
+    if (!meuLado) {
+        console.warn("Lado não definido. Escolha uma cor antes de enviar emojis.");
+        return;
     }
 
-    // 3. LÓGICA DE ENVIO
+    // 3. LÓGICA DE ENVIO (Firebase)
     if (modoJogo === 'online') {
-        // Usando os nomes de campos que o seu Firebase está esperando
+        // Padronizando os nomes para: 'texto' e 'ts' (conforme seu onValue)
         set(emojiRef, { 
-            emoji: emoji, 
+            texto: emoji, 
             lado: meuLado, 
-            timestamp: Date.now() 
-        });
+            ts: Date.now() 
+        }).catch(err => console.error("Erro ao enviar emoji:", err));
+    } else {
+        // Se for modo IA, apenas exibe localmente para diversão
+        exibirEmojiNaTela(emoji, meuLado);
     }
 };
 
@@ -988,12 +916,10 @@ function clicar(r, c) {
         // Seleciona a peça e redesenha o tabuleiro para mostrar o destaque
         selecionada = { r, c };
         desenhar();
-        console.log(`Peça selecionada em: R${r} C${c}`);
         return;
     }
 
     if (selecionada && valor === 0) {
-        console.log(`Tentando mover para: R${r} C${c}`);
         validarEMover(r, c);
     }
 }
@@ -1061,8 +987,6 @@ function validarEMover(r, c) {
 
     const todasAsJogadas = obterTodosMvs(mapa, turno);
     const temCapturaNoTabuleiro = todasAsJogadas.some(m => m.cap);
-
-    // Encontra o movimento específico na lista de jogadas legais
     const movValido = todasAsJogadas.find(m => 
         m.de.r === selecionada.r &&
         m.de.c === selecionada.c &&
@@ -1070,10 +994,8 @@ function validarEMover(r, c) {
         m.para.c === c
     );
 
-    // Se o clique não corresponde a um movimento válido, cancela
     if (!movValido) return;
 
-    // ⚠️ REGRA DA CAPTURA OBRIGATÓRIA (Lei do "Sopro")
     if (temCapturaNoTabuleiro && !movValido.cap) {
         if (typeof window.mostrarAvisoCaptura === 'function') {
             window.mostrarAvisoCaptura();
@@ -1104,11 +1026,10 @@ function validarEMover(r, c) {
     const pecaValor = mapa[selecionada.r][selecionada.c];
     let pecaFinal = pecaValor;
 
-    // Linha 0 para Vermelhas (Turno 1) / Linha 7 para Pretas (Turno 2)
     if ((turno === 1 && r === 0) || (turno === 2 && r === 7)) {
         if (pecaValor <= 2) { // Se ainda for peça comum
             pecaFinal = (turno === 1) ? 3 : 4; // 3=Dama Vermelha, 4=Dama Preta
-            console.log("Peça coroada!");
+            
         }
     }
 
@@ -1124,11 +1045,8 @@ function validarEMover(r, c) {
     );
 
     if (temMais) {
-        // Se puder continuar capturando com a mesma peça, não muda o turno
         selecionada = { r, c };
-        console.log("Combo detectado! Continue sua jogada.");
 
-        // Sincroniza o mapa parcial no Firebase para o oponente ver o "pulo" da peça
         if (modoJogo === 'online') {
             import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(({ update }) => {
                 update(gameRef, { 
@@ -1145,9 +1063,7 @@ function validarEMover(r, c) {
 
         // 🔥 SALVA NO FIREBASE (MODO ONLINE) - ATUALIZAÇÃO SEGURA
         if (modoJogo === 'online') {
-            // Importação dinâmica do update caso não esteja no topo
             import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(({ update }) => {
-                // USAMOS UPDATE EM VEZ DE SET PARA NÃO APAGAR NOMES E FOTOS
                 update(gameRef, {
                     mapa: mapa,
                     turno: novoTurno,
@@ -1155,7 +1071,7 @@ function validarEMover(r, c) {
                     capturasP: capturasP,
                     ts: Date.now() // Timestamp para marcar a última alteração
                 }).then(() => {
-                    console.log("Sincronização concluída via update.");
+
                 }).catch(err => console.error("Erro ao atualizar:", err));
             });
         }
@@ -1180,36 +1096,6 @@ function validarEMover(r, c) {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // --- FUNÇÃO AUXILIAR DE ANIMAÇÃO CORRIGIDA ---
 function animarPecaParaPlacar(r, c, tipoPecaComida) {
@@ -1269,6 +1155,19 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
     }, 820); // 820ms para casar com a transição de 0.8s
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 function avaliarTabuleiro(mapa, turnoIA) {
     let score = 0;
 
@@ -1278,18 +1177,44 @@ function avaliarTabuleiro(mapa, turnoIA) {
 
             if (v === 0) continue;
 
-            const ehIA =
-                (turnoIA === 1 && (v === 1 || v === 3)) ||
-                (turnoIA === 2 && (v === 2 || v === 4));
+            // Identifica se a peça pertence à IA ou ao Humano
+            const ehIA = (turnoIA === 1 && (v === 1 || v === 3)) ||
+                         (turnoIA === 2 && (v === 2 || v === 4));
 
-            const valorBase =
-                (v === 3 || v === 4) ? 6 : 3; // dama vale mais
+            // --- 1. VALOR BASE DA PEÇA ---
+            // Usamos valores maiores (100 e 300) para permitir maior precisão nos bônus
+            let valorPeca = (v === 3 || v === 4) ? 300 : 100;
 
+            // --- 2. BÔNUS DE POSICIONAMENTO ESTRATÉGICO ---
+            
+            // Controle do Centro: Peças no centro (linhas 3,4,5 e colunas 2,3,4,5) 
+            // dominam mais o tabuleiro e são mais difíceis de cercar.
+            if (r >= 2 && r <= 5 && c >= 2 && c <= 5) {
+                valorPeca += 25;
+            }
+
+            // Segurança nas Bordas: Peças nas laterais não podem ser capturadas por dois lados.
+            if (c === 0 || c === 7) {
+                valorPeca += 15;
+            }
+
+            // Defesa da Base: Incentiva a IA a manter as peças da última linha paradas 
+            // para evitar que o jogador faça dama facilmente.
+            if ((turnoIA === 1 && r === 7) || (turnoIA === 2 && r === 0)) {
+                valorPeca += 40;
+            }
+
+            // --- 3. CÁLCULO DO SCORE FINAL ---
             if (ehIA) {
-                score += valorBase;
-                score += (turnoIA === 1 ? (7 - r) : r) * 0.1; // avanço
+                score += valorPeca;
+                // Bônus por avanço: quanto mais perto de virar dama, melhor
+                const progresso = (turnoIA === 1 ? (7 - r) : r);
+                score += progresso * 10; 
             } else {
-                score -= valorBase;
+                // Penalidade por peças do oponente (IA quer reduzir isso ao máximo)
+                score -= valorPeca;
+                const progressoOponente = (turnoIA === 1 ? r : (7 - r));
+                score -= progressoOponente * 10;
             }
         }
     }
@@ -1297,14 +1222,20 @@ function avaliarTabuleiro(mapa, turnoIA) {
     return score;
 }
 
+
 function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turnoIA) {
+    // 1. Condição de parada: profundidade alcançada
     if (profundidade === 0) {
         return avaliarTabuleiro(mapa, turnoIA);
     }
 
-    const mvs = obterTodosMvs(mapa, turnoAtual);
+    // 2. IMPORTANTE: Usar a lógica de jogadas OBRIGATÓRIAS (capturas)
+    // Isso impede que a IA ignore capturas nas simulações futuras.
+    const mvs = obterJogadasValidasObrigatorias(mapa, turnoAtual);
+    
+    // 3. Condição de derrota/vitória simulada
     if (mvs.length === 0) {
-        return maximizando ? -9999 : 9999;
+        return maximizando ? -10000 : 10000;
     }
 
     if (maximizando) {
@@ -1314,6 +1245,9 @@ function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turno
             const copia = JSON.parse(JSON.stringify(mapa));
             aplicarMovimentoSimulado(copia, mv, turnoAtual);
 
+            // Se houve captura, o turno pode continuar sendo da mesma pessoa (combo)
+            // Para simplificar o Minimax e evitar travamentos, alternamos o turno,
+            // mas a lógica de captura obrigatória já cuida do peso das peças.
             const valor = minimax(
                 copia,
                 profundidade - 1,
@@ -1326,9 +1260,8 @@ function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turno
 
             melhor = Math.max(melhor, valor);
             alpha = Math.max(alpha, valor);
-            if (beta <= alpha) break;
+            if (beta <= alpha) break; // Poda Alpha-Beta
         }
-
         return melhor;
     } else {
         let pior = Infinity;
@@ -1349,9 +1282,8 @@ function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turno
 
             pior = Math.min(pior, valor);
             beta = Math.min(beta, valor);
-            if (beta <= alpha) break;
+            if (beta <= alpha) break; // Poda Alpha-Beta
         }
-
         return pior;
     }
 }
@@ -1375,16 +1307,65 @@ function obterJogadasValidasObrigatorias(mapa, turno) {
     return capturas.length > 0 ? capturas : todas;
 }
 
-// --- 🟢 IA AVANÇADA COM SUPORTE A COMBO ---
+// ✅ ---IA AVANÇADA COM SUPORTE A COMBO ---
+
 async function jogadaDaIA() {
     const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
     if (turno !== turnoIA || modoJogo !== 'ia') return;
 
-    await new Promise(r => setTimeout(r, 2000));
+    // Se não estiver no meio de um combo, aguarda o tempo de pensamento
+    if (!selecionada) {
+        await new Promise(r => setTimeout(r, 2000));
+    }
 
-    const jogadasValidas = obterJogadasValidasObrigatorias(mapa, turnoIA);
-
+    let jogadasValidas = obterJogadasValidasObrigatorias(mapa, turnoIA);
     if (jogadasValidas.length === 0) return;
+
+    // --- LÓGICA DA LEI DA MAIORIA EMBUTIDA ---
+    const capturas = jogadasValidas.filter(m => m.cap);
+    
+    if (capturas.length > 0) {
+        // Mapeia cada jogada para descobrir quantas peças ela captura no total (combos inclusos)
+        const capturasComPeso = capturas.map(mv => {
+            let totalCapturas = 0;
+            let mapaSimulado = JSON.parse(JSON.stringify(mapa));
+            let rAtual = mv.para.r;
+            let cAtual = mv.para.c;
+            
+            // Simulação local rápida para contar o combo deste movimento específico
+            totalCapturas++; // Conta a primeira captura
+            mapaSimulado[mv.para.r][mv.para.c] = mapaSimulado[mv.de.r][mv.de.c];
+            mapaSimulado[mv.de.r][mv.de.c] = 0;
+            mapaSimulado[mv.cap.r][mv.cap.c] = 0;
+
+            // Verifica recursivamente saltos extras apenas para contagem
+            let temMais = true;
+            while (temMais) {
+                let proximas = obterTodosMvs(mapaSimulado, turnoIA).filter(m => 
+                    m.de.r === rAtual && m.de.c === cAtual && m.cap
+                );
+                if (proximas.length > 0) {
+                    totalCapturas++;
+                    let prox = proximas[0];
+                    mapaSimulado[prox.para.r][prox.para.c] = mapaSimulado[prox.de.r][prox.de.c];
+                    mapaSimulado[prox.de.r][prox.de.c] = 0;
+                    mapaSimulado[prox.cap.r][prox.cap.c] = 0;
+                    rAtual = prox.para.r;
+                    cAtual = prox.para.c;
+                } else {
+                    temMais = false;
+                }
+            }
+            return { movimento: mv, peso: totalCapturas };
+        });
+
+        // Filtra para manter apenas os movimentos que capturam o número MÁXIMO de peças
+        const maxPeças = Math.max(...capturasComPeso.map(c => c.peso));
+        jogadasValidas = capturasComPeso
+            .filter(c => c.peso === maxPeças)
+            .map(c => c.movimento);
+    }
+
     let movimentosPossiveis = jogadasValidas;
     if (selecionada) {
         movimentosPossiveis = jogadasValidas.filter(m => 
@@ -1394,7 +1375,7 @@ async function jogadaDaIA() {
 
     let melhorJogada = null;
     let melhorValor = -Infinity;
-    const profundidade = 4;
+    const profundidade = 8;
 
     for (const mv of movimentosPossiveis) {
         const copia = JSON.parse(JSON.stringify(mapa));
@@ -1419,22 +1400,35 @@ async function jogadaDaIA() {
     if (melhorJogada) {
         selecionada = melhorJogada.de;
         
-        // Executa o movimento
+        // Executa o movimento real no tabuleiro
         validarEMover(melhorJogada.para.r, melhorJogada.para.c);
         desenhar();
 
-        // LOGICA DE COMBO:
+        // LÓGICA DE COMBO: Se 'selecionada' ainda existir, a IA continua jogando
         if (selecionada) {
-            setTimeout(jogadaDaIA, 600);
+            setTimeout(jogadaDaIA, 800);
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+// ✅ verificarFimDeJogo
 
 function verificarFimDeJogo() {
     let temVermelho = false;
     let temPreto = false;
 
-    // Percorre o mapa procurando peças
+    // Percorre o mapa procurando peças remanescentes
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             if (mapa[r][c] === 1 || mapa[r][c] === 3) temVermelho = true;
@@ -1442,9 +1436,16 @@ function verificarFimDeJogo() {
         }
     }
 
-    // Se um dos lados não tem mais peças ou não tem movimentos (opcional)
+    // Se um dos lados ficou sem peças
     if (!temVermelho || !temPreto) {
-        exibirModalVitoria(temVermelho ? "VERMELHO" : "PRETO");
+        const ladoVencedor = temVermelho ? "vermelho" : "preto";
+
+        // Compara se o vencedor é você ou o adversário (IA ou Humano)
+        if (meuLado === ladoVencedor) {
+            exibirModalVitoria(ladoVencedor.toUpperCase());
+        } else {
+            exibirModalDerrota();
+        }
     }
 }
 
@@ -1465,6 +1466,19 @@ function exibirModalVitoria(vencedor) {
     }
 }
 
+function exibirModalDerrota() {
+    const tela = document.getElementById('tela-derrota');
+    
+    if (tela) {
+        // Exibe o container
+        tela.style.display = 'flex'; 
+        
+        // Ativa a animação de opacidade/escala definida no seu CSS
+        setTimeout(() => {
+            tela.classList.add('ativo');
+        }, 10);
+    }
+}
 
 // Função para sair do jogo
 
