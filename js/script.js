@@ -732,22 +732,26 @@ onValue(listaJogadoresRef, (snapshot) => {
     const dotP = document.getElementById('status-p');
 
     // --- LÓGICA PARA O JOGADOR VERMELHO ---
-    if (dotV && nomeV) {
-        // Fica online se: está no banco OU se o nome no campo é o MEU nome
-        if (jogadoresOnline[nomeV] || (meuNome && nomeV === meuNome)) {
+    if (dotV) {
+        // Regra: Só mostra a bolinha se o Vermelho for o MEU OPONENTE (eu sou o preto)
+        // E se ele estiver online no Firebase
+        if (meuLado === 'preto' && jogadoresOnline[nomeV]) {
+            dotV.style.display = "inline-block"; // Aparece
             dotV.classList.add('online');
         } else {
-            dotV.classList.remove('online');
+            dotV.style.display = "none"; // Esconde (se for eu ou estiver offline)
         }
     }
 
     // --- LÓGICA PARA O JOGADOR PRETO ---
-    if (dotP && nomeP) {
-        // Fica online se: está no banco OU se o nome no campo é o MEU nome
-        if (jogadoresOnline[nomeP] || (meuNome && nomeP === meuNome)) {
+    if (dotP) {
+        // Regra: Só mostra a bolinha se o Preto for o MEU OPONENTE (eu sou o vermelho)
+        // E se ele estiver online no Firebase
+        if (meuLado === 'vermelho' && jogadoresOnline[nomeP]) {
+            dotP.style.display = "inline-block"; // Aparece
             dotP.classList.add('online');
         } else {
-            dotP.classList.remove('online');
+            dotP.style.display = "none"; // Esconde (se for eu ou estiver offline)
         }
     }
 
@@ -756,7 +760,7 @@ onValue(listaJogadoresRef, (snapshot) => {
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
-            // Não mostra você mesmo na lista de "Amigos Online"
+            // Não mostra você mesmo na lista lateral de "Amigos Online"
             if (meuNome && nome === meuNome) continue; 
 
             const li = document.createElement('li');
@@ -772,6 +776,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
