@@ -195,7 +195,156 @@ body.visao-preto .centro {
     padding: 40px 30px !important;
 }
 
-.modal-header { margin-bottom: 25px; }
+/* modal perdeu */
+
+.modal-perdeu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 5, 5, 0.9); /* Fundo quase preto */
+    backdrop-filter: blur(12px) grayscale(50%); /* Desfoca e tira a cor do fundo */
+    -webkit-backdrop-filter: blur(12px) grayscale(50%);
+    display: none; 
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.4s ease;
+}
+
+.modal-perdeu-overlay.ativo {
+    opacity: 1;
+}
+
+/* O Card com Estilo Gaming (Dark UI + Neon) */
+.card-perdeu-nativo {
+    background: #1a1a1a; /* Fundo escuro gamer */
+    width: 85%;
+    max-width: 360px;
+    padding: 40px 25px;
+    border-radius: 30px;
+    text-align: center;
+    border: 3px solid #ff4757; /* Borda de destaque */
+    box-shadow: 0 0 30px rgba(255, 71, 87, 0.4), inset 0 0 15px rgba(0,0,0,0.5); /* Brilho externo neon */
+    transform: scale(0.7) rotate(-5deg); /* Surge com uma leve rotação */
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-perdeu-overlay.ativo .card-perdeu-nativo {
+    transform: scale(1) rotate(0deg);
+}
+
+/* Badge Superior com brilho */
+.status-badge {
+    background: #ff4757;
+    color: white;
+    font-size: 12px;
+    font-weight: 900;
+    padding: 6px 18px;
+    border-radius: 0 0 15px 15px;
+    display: inline-block;
+    letter-spacing: 2px;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5);
+    text-transform: uppercase;
+}
+
+.emoji-main {
+    font-size: 80px;
+    margin: 20px 0 10px;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
+    animation: tremor 0.5s infinite; /* Efeito de tremer de frustração */
+}
+
+@keyframes tremor {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    20% { transform: translate(-1px, -2px) rotate(-1deg); }
+    40% { transform: translate(-3px, 0px) rotate(1deg); }
+    60% { transform: translate(3px, 2px) rotate(0deg); }
+    80% { transform: translate(1px, -1px) rotate(1deg); }
+    100% { transform: translate(-1px, 2px) rotate(-1deg); }
+}
+
+.titulo-perdeu {
+    color: #fff;
+    font-size: 32px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-family: 'Arial Black', sans-serif;
+    letter-spacing: -1px;
+    text-shadow: 2px 2px 0px #ff4757;
+}
+
+.texto-perdeu {
+    color: #aaa;
+    font-size: 16px;
+    margin-bottom: 30px;
+    font-weight: 500;
+}
+
+/* Botões Estilo "Start" */
+.acoes-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.btn-reiniciar-primario {
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    padding: 18px;
+    border-radius: 15px;
+    font-size: 18px;
+    font-weight: 900;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 6px 0px #cccccc; /* Efeito de botão 3D */
+    transition: all 0.1s;
+}
+
+.btn-reiniciar-primario:hover {
+    background: #ff4757;
+    color: white;
+    box-shadow: 0 6px 0px #b33939;
+}
+
+.btn-reiniciar-primario:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0px #b33939;
+}
+
+.btn-voltar-menu {
+    background: transparent;
+    color: #666;
+    border: 2px solid #333;
+    padding: 12px;
+    border-radius: 15px;
+    font-weight: 800;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-voltar-menu:hover {
+    color: #fff;
+    border-color: #ff4757;
+}
+
+/* fim */
+
+.modal-header {
+    margin-bottom: 25px;
+    }
+    
 .logo-circle {
     width: 70px; height: 70px;
     background: #222;
@@ -240,26 +389,66 @@ body.visao-preto .centro {
     transition: all 0.2s ease;
 }
 
-.option-card:hover { border-color: #555; background: #2a2a2a; }
+.option-card:hover {
+    border-color: #555;
+    background: #2a2a2a;
+    }
 
 .option-card.selected {
     border-color: #ffce00;
     background: rgba(255, 206, 0, 0.05);
 }
 
-.card-icon { font-size: 24px; }
-.card-title { display: block; font-weight: bold; font-size: 15px; }
-.card-desc { font-size: 12px; color: #777; }
+.card-icon {
+    font-size: 24px;
+    }
+    
+.card-title {
+    display: block;
+    font-weight: bold;
+    font-size: 15px;
+    }
+.card-desc {
+    font-size: 12px;
+    color: #777;
+    }
 
 /* Botões de Lado */
-.side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.side-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 10px;
+    }
+    
 .side-btn {
-    padding: 12px; border-radius: 10px; border: none;
-    cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
-.side-btn.red { background: #b91d1d; color: white; }
-.side-btn.black { background: #000; color: white; border: 1px solid #333; }
-.side-btn .dot { width: 10px; height: 10px; border-radius: 50%; background: white; }
+.side-btn.red {
+    background: #b91d1d;
+    color: white;
+    }
+    
+.side-btn.black {
+    background: #000;
+    color: white;
+    border: 1px solid #333;
+    }
+    
+.side-btn .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+    }
 
 .input-nome:disabled {
     background: transparent;
@@ -318,7 +507,7 @@ body.visao-preto .centro {
     position: fixed;
     font-size: 40px;
     z-index: 9999;
-    pointer-events: none; /* Não atrapalha os cliques no jogo */
+    pointer-events: none;
     animation: floatUpAndFade 2.5s ease-out forwards;
 }
 
@@ -652,7 +841,9 @@ body.visao-preto .centro {
     box-shadow: 0 20px 50px rgba(0,0,0,0.8);
 }
 
-.vitoria-card { border-color: #ffce00; }
+.vitoria-card {
+    border-color: #ffce00;
+}
 
 /* BOTÕES */
 .btn-modo, .btn-lado, .btn-novo-jogo {
@@ -676,7 +867,8 @@ body.visao-preto .centro {
 .btn-novo-jogo { background: #ffce00; color: black; margin-top: 20px; }
 .btn-novo-jogo:hover { background: #e6b800; transform: scale(1.05); }
 
-/* EMOJIS */
+/* estilo css emoji novo*/
+
 .emoji-list {
     background: white;
     padding: 20px;
@@ -694,26 +886,49 @@ body.visao-preto .centro {
 
 .emoji-list span:hover { transform: scale(1.3); }
 
+
+.emoji-picker-overlay {
+    /* ... seus estilos atuais ... */
+    z-index: 10001; 
+}
+
+/* O corpo do Emoji que vai voar */
 .float-emoji {
-    position: absolute;
-    top: -50px; left: 50%;
+    position: fixed; /* Fixed para ignorar o scroll e focar na tela */
+    left: 50%;
     transform: translateX(-50%);
-    font-size: 45px;
-    animation: floatUp 2.5s ease-out forwards;
+    font-size: 50px;
+    z-index: 99999;
     pointer-events: none;
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
 }
 
-/* ANIMAÇÕES */
-@keyframes floatUp {
-    0% { opacity: 0; transform: translate(-50%, 20px); }
-    20% { opacity: 1; transform: translate(-50%, 0); }
-    100% { opacity: 0; transform: translate(-50%, -100px); }
+/* Animação para o jogador que está no TOPO (Preto) */
+.animar-descer {
+    animation: viajarParaBaixo 2s ease-in-out forwards;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
+/* Animação para o jogador que está na BASE (Vermelho) */
+.animar-subir {
+    animation: viajarParaCima 2s ease-in-out forwards;
 }
+
+@keyframes viajarParaBaixo {
+    0% { top: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
+    50% { top: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
+    80% { opacity: 1; }
+    100% { top: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+}
+
+@keyframes viajarParaCima {
+    0% { bottom: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
+    50% { bottom: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
+    80% { opacity: 1; }
+    100% { bottom: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+}
+/* fim do estilo css emoji*/
 
 #tela-vitoria.ativo {
     display: flex;
