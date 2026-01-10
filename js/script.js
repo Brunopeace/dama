@@ -724,33 +724,35 @@ window.registrarPresenca = (nome) => {
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes atuais nos placares
+    // Nomes atuais nos placares (os valores escritos nos inputs)
     const nomeV = document.getElementById('input-nome-v')?.value;
     const nomeP = document.getElementById('input-nome-p')?.value;
     
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O PLACAR VERMELHO ---
+    // --- LÓGICA PARA A BOLINHA VERMELHA ---
     if (dotV) {
-        // EU VEJO A BOLINHA VERMELHA SE: Eu for o PRETO e o Vermelho estiver online
-        if (meuLado === 'preto' && jogadoresOnline[nomeV]) {
+        // CONDIÇÃO: Eu só vejo a bolinha vermelha se eu for o PRETO 
+        // E se o nome que está no campo vermelho constar na lista de online
+        if (meuLado === 'preto' && nomeV && jogadoresOnline[nomeV]) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
-            // Se eu sou o Vermelho, eu NÃO vejo a minha própria bolinha
+            // Se eu for o vermelho, ou se o oponente estiver offline, esconde
             dotV.style.display = "none";
         }
     }
 
-    // --- LÓGICA PARA O PLACAR PRETO ---
+    // --- LÓGICA PARA A BOLINHA PRETA ---
     if (dotP) {
-        // EU VEJO A BOLINHA PRETA SE: Eu for o VERMELHO e o Preto estiver online
-        if (meuLado === 'vermelho' && jogadoresOnline[nomeP]) {
+        // CONDIÇÃO: Eu só vejo a bolinha preta se eu for o VERMELHO
+        // E se o nome que está no campo preto constar na lista de online
+        if (meuLado === 'vermelho' && nomeP && jogadoresOnline[nomeP]) {
             dotP.style.display = "inline-block";
             dotP.classList.add('online');
         } else {
-            // Se eu sou o Preto, eu NÃO vejo a minha própria bolinha
+            // Se eu for o preto, ou se o oponente estiver offline, esconde
             dotP.style.display = "none";
         }
     }
@@ -775,6 +777,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
