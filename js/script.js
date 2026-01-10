@@ -459,6 +459,27 @@ if (modo === 'online') {
     }
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
     const nomeDigitado = nomeInput ? nomeInput.value.trim() : "";
@@ -470,7 +491,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
-    meuNome = nomeDigitado; // Garante que a variável global de nome esteja preenchida
+    meuNome = nomeDigitado; 
     mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
@@ -486,27 +507,25 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (campoNome) campoNome.value = nomeDigitado;
 
     if (modoJogo === 'online') {
-        // --- REGISTRAR PRESENÇA ONLINE (NOVO) ---
-        if (typeof registrarPresenca === 'function') {
-            registrarPresenca(nomeDigitado);
-        }
+        // --- REGISTRAR PRESENÇA ONLINE ---
+        // Isso faz com que o oponente consiga te ver
+        const minhaPresencaRef = ref(db, `usuarios_online/${nomeDigitado}`);
+        set(minhaPresencaRef, { online: true, nome: nomeDigitado });
 
-        // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE
+        // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
-        const minhaPresencaRef = ref(db, `usuarios_online/${nomeDigitado}`);
 
         set(playerStatusRef, true);
         set(playerNameRef, nomeDigitado);
         
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO (ATUALIZADO)
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
             pkg.onDisconnect(playerPhotoRef).remove();
-            // Também remove o status de "Online" da lista global ao desconectar
-            pkg.onDisconnect(minhaPresencaRef).remove();
+            pkg.onDisconnect(minhaPresencaRef).remove(); // Remove você da lista online ao fechar
         });
 
         onValue(gameRef, (snap) => {
@@ -521,16 +540,15 @@ window.confirmarCadastro = (ladoEscolhido) => {
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL E GATILHO INICIAL IA
+    // 7. FINALIZAÇÃO VISUAL
     const modal = document.getElementById('modal-cadastro');
     if (modal) modal.style.display = 'none';
     
-    const selecaoLado = document.getElementById('selecao-lado-container');
+    const selecaoLado = document.getElementById('side-selection'); // Ajustado para o ID do seu HTML
     if (selecaoLado) selecaoLado.style.display = 'none';
 
     desenhar();
 
-    // --- GATILHO INICIAL PARA IA ---
     if (modoJogo === 'ia') {
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
         if (turno === idTurnoIA) {
@@ -540,6 +558,22 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -731,58 +765,71 @@ function iniciarMonitoramentoOnline() {
 
 
 // nova função
+// --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
+
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Garante que você apareça para os outros)
+// 1. Registrar presença (Faz você aparecer online para os outros)
 window.registrarPresenca = (nome) => {
+    if (!nome) return;
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
+    
+    // Define que você está online
     set(minhaPresencaRef, { online: true, nome: nome });
     
+    // Configura para remover automaticamente do Firebase se você fechar a aba ou cair a conexão
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
 };
 
-// 2. Monitorar quem está online e atualizar a UI
+// 2. Monitorar a lista global e atualizar apenas o status do OPONENTE
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes atuais nos placares
-    const nomeV = document.getElementById('input-nome-v')?.value;
-    const nomeP = document.getElementById('input-nome-p')?.value;
+    // Pega o que está escrito nos campos de nome do placar
+    const nomeVermelho = document.getElementById('input-nome-v')?.value;
+    const nomePreto = document.getElementById('input-nome-p')?.value;
     
-    // IDs que você colocou no seu HTML
+    // Elementos das bolinhas (IDs conforme seu HTML)
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O JOGADOR VERMELHO ---
+    // --- LÓGICA PARA O LADO VERMELHO ---
     if (dotV) {
-        // Mostra a bolinha do oponente se eu sou o PRETO e ele está online
-        if (meuLado === 'preto' && nomeV && jogadoresOnline[nomeV]) {
+        // CONDIÇÃO: Eu sou o PRETO e o nome do VERMELHO está na lista de online
+        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho]) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
+            // Se eu sou o Vermelho, eu não vejo minha própria bolinha
+            // Se o oponente não estiver na lista, a bolinha some
             dotV.style.display = "none";
+            dotV.classList.remove('online');
         }
     }
 
-    // --- LÓGICA PARA O JOGADOR PRETO ---
+    // --- LÓGICA PARA O LADO PRETO ---
     if (dotP) {
-        // Mostra a bolinha do oponente se eu sou o VERMELHO e ele está online
-        if (meuLado === 'vermelho' && nomeP && jogadoresOnline[nomeP]) {
+        // CONDIÇÃO: Eu sou o VERMELHO e o nome do PRETO está na lista de online
+        if (meuLado === 'vermelho' && nomePreto && jogadoresOnline[nomePreto]) {
             dotP.style.display = "inline-block";
             dotP.classList.add('online');
         } else {
+            // Se eu sou o Preto, eu não vejo minha própria bolinha
             dotP.style.display = "none";
+            dotP.classList.remove('online');
         }
     }
 
-    // --- ATUALIZAR LISTA LATERAL ---
+    // --- PARTE B: ATUALIZAR LISTA LATERAL DE AMIGOS ---
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
+            // Não mostra você mesmo na lista de convites
             if (meuNome && nome === meuNome) continue; 
+
             const li = document.createElement('li');
             li.className = 'jogador-item';
             li.innerHTML = `
@@ -796,6 +843,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
