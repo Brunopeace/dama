@@ -709,49 +709,49 @@ function iniciarMonitoramentoOnline() {
 // nova função
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Garante que você apareça para os outros)
+// 1. Registrar presença (Garante que apareces para os outros)
 window.registrarPresenca = (nome) => {
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     set(minhaPresencaRef, { online: true, nome: nome });
     
-    // Configura para remover do Firebase se a aba for fechada
+    // Remove do Firebase se a aba for fechada
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
 };
 
-// 2. Monitorar quem está online e atualizar a UI (Placar + Painel)
+// 2. Monitorizar quem está online e atualizar a UI
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Nomes atuais que estão escritos nos campos do placar
+    // Nomes atuais nos placares
     const nomeV = document.getElementById('input-nome-v')?.value;
     const nomeP = document.getElementById('input-nome-p')?.value;
     
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O JOGADOR VERMELHO ---
+    // --- LÓGICA PARA O PLACAR VERMELHO ---
     if (dotV) {
-        // Regra: Só mostra a bolinha se o Vermelho for o MEU OPONENTE (eu sou o preto)
-        // E se ele estiver online no Firebase
+        // EU VEJO A BOLINHA VERMELHA SE: Eu for o PRETO e o Vermelho estiver online
         if (meuLado === 'preto' && jogadoresOnline[nomeV]) {
-            dotV.style.display = "inline-block"; // Aparece
+            dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
-            dotV.style.display = "none"; // Esconde (se for eu ou estiver offline)
+            // Se eu sou o Vermelho, eu NÃO vejo a minha própria bolinha
+            dotV.style.display = "none";
         }
     }
 
-    // --- LÓGICA PARA O JOGADOR PRETO ---
+    // --- LÓGICA PARA O PLACAR PRETO ---
     if (dotP) {
-        // Regra: Só mostra a bolinha se o Preto for o MEU OPONENTE (eu sou o vermelho)
-        // E se ele estiver online no Firebase
+        // EU VEJO A BOLINHA PRETA SE: Eu for o VERMELHO e o Preto estiver online
         if (meuLado === 'vermelho' && jogadoresOnline[nomeP]) {
-            dotP.style.display = "inline-block"; // Aparece
+            dotP.style.display = "inline-block";
             dotP.classList.add('online');
         } else {
-            dotP.style.display = "none"; // Esconde (se for eu ou estiver offline)
+            // Se eu sou o Preto, eu NÃO vejo a minha própria bolinha
+            dotP.style.display = "none";
         }
     }
 
@@ -760,7 +760,6 @@ onValue(listaJogadoresRef, (snapshot) => {
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
-            // Não mostra você mesmo na lista lateral de "Amigos Online"
             if (meuNome && nome === meuNome) continue; 
 
             const li = document.createElement('li');
@@ -776,6 +775,7 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
 
 
 
