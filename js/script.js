@@ -160,6 +160,25 @@ onValue(gameRef, (snapshot) => {
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 });
 
+// Referência para o vencedor no banco
+const vencedorRef = ref(db, 'partida_unica/vencedor');
+
+onValue(vencedorRef, (snap) => {
+    const vencedorId = snap.val();
+    
+    // Se existe um vencedor gravado no banco de dados
+    if (vencedorId) {
+        // Se eu sou o vencedor
+        if (meuLado === vencedorId) {
+            exibirModalVitoria(vencedorId.toUpperCase());
+        } 
+        // Se o vencedor é o outro, então eu perdi
+        else {
+            exibirModalDerrota();
+        }
+    }
+});
+
 // --- VARIÁVEIS GLOBAIS ---
 let jogoIniciado = false;
 let partidaConfirmada = false;
@@ -703,7 +722,7 @@ window.salvarNoFirebase = (novoTurno = turno) => {
 // 🟢 função reiniciar
  
 window.reiniciar = () => {
-
+    // 1. Restaurar o Tabuleiro (Mapa inicial)
     mapa = [
         [0, 2, 0, 2, 0, 2, 0, 2], 
         [2, 0, 2, 0, 2, 0, 2, 0], 
@@ -714,12 +733,15 @@ window.reiniciar = () => {
         [0, 1, 0, 1, 0, 1, 0, 1], 
         [1, 0, 1, 0, 1, 0, 1, 0]
     ];
+
+    // 2. Resetar variáveis de estado
     turno = 1; 
     capturasV = 0; 
     capturasP = 0; 
     selecionada = null;
     jogoIniciado = true;
-   
+
+    // 3. Esconder Modais (Vitória e Derrota Profissional)
     const telaVitoria = document.getElementById('tela-vitoria');
     if (telaVitoria) {
         telaVitoria.classList.remove('ativo');
@@ -728,27 +750,35 @@ window.reiniciar = () => {
     
     const telaDerrota = document.getElementById('tela-derrota');
     if (telaDerrota) {
-    telaDerrota.classList.remove('ativo');
-    telaDerrota.style.display = 'none';
+        telaDerrota.classList.remove('ativo');
+        telaDerrota.style.display = 'none';
     }
 
-    // 3. Atualizar o tabuleiro e placares
+    // 4. Atualizar a Interface do Usuário
     desenhar();
     if (typeof atualizarUI === 'function') atualizarUI();
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 
-    // 4. Sincronizar se estiver online (Apenas o mestre da sala/vermelho reseta o banco)
-    if (modoJogo === 'online' && meuLado === 'vermelho') {
-        if (typeof window.salvarNoFirebase === 'function') {
-            window.salvarNoFirebase(1); // Força o turno 1 no Firebase
+    // 5. Sincronizar Firebase (Modo Online)
+    if (modoJogo === 'online') {
+        // Apenas o jogador Vermelho (geralmente o mestre/criador) limpa os dados globais
+        if (meuLado === 'vermelho') {
+            // Remove o vencedor do banco para liberar a tela do oponente
+            const vencedorRef = ref(db, 'partida_unica/vencedor');
+            remove(vencedorRef);
+
+            // Reseta o mapa e o turno para o oponente ver a mudança
+            if (typeof window.salvarNoFirebase === 'function') {
+                window.salvarNoFirebase(1); 
+            }
         }
     }
-
-    // 5. 🔥 GATILHO PARA IA (CORREÇÃO)
-    // Se estiver no modo IA, verifica se o turno inicial (1) pertence à máquina
+    
+    // 6. Lógica de Início para IA
     if (modoJogo === 'ia') {
         const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
         
+        // Se a IA for o turno 1 (Preto), ela já começa jogando
         if (turno === turnoIA) {
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
@@ -908,7 +938,6 @@ function clicar(r, c) {
                 if (typeof window.mostrarAvisoCaptura === 'function') {
                     window.mostrarAvisoCaptura();
                 }
-                console.log("Existem capturas obrigatórias com outras peças!");
                 return;
             }
         }
@@ -962,15 +991,6 @@ window.mostrarAvisoCaptura = function() {
         setTimeout(() => aviso.remove(), 2500);
     }
 };
-
-
-
-
-
-
-
-
-        // 0901-3
 
 // 🟢 TRAVA ONLINE E EXECUÇÃO DE MOVIMENTO
 function validarEMover(r, c) {
@@ -1155,19 +1175,6 @@ function animarPecaParaPlacar(r, c, tipoPecaComida) {
     }, 820); // 820ms para casar com a transição de 0.8s
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 function avaliarTabuleiro(mapa, turnoIA) {
     let score = 0;
 
@@ -1221,7 +1228,6 @@ function avaliarTabuleiro(mapa, turnoIA) {
 
     return score;
 }
-
 
 function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turnoIA) {
     // 1. Condição de parada: profundidade alcançada
@@ -1411,24 +1417,12 @@ async function jogadaDaIA() {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
 // ✅ verificarFimDeJogo
 
 function verificarFimDeJogo() {
     let temVermelho = false;
     let temPreto = false;
 
-    // Percorre o mapa procurando peças remanescentes
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             if (mapa[r][c] === 1 || mapa[r][c] === 3) temVermelho = true;
@@ -1436,11 +1430,15 @@ function verificarFimDeJogo() {
         }
     }
 
-    // Se um dos lados ficou sem peças
     if (!temVermelho || !temPreto) {
         const ladoVencedor = temVermelho ? "vermelho" : "preto";
 
-        // Compara se o vencedor é você ou o adversário (IA ou Humano)
+        // --- NOVIDADE: Envia para o Firebase se for online ---
+        if (modoJogo === 'online') {
+            set(ref(db, 'partida_unica/vencedor'), ladoVencedor);
+        }
+
+        // Execução local (para quem fez a jogada)
         if (meuLado === ladoVencedor) {
             exibirModalVitoria(ladoVencedor.toUpperCase());
         } else {
