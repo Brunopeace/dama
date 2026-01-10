@@ -17,7 +17,7 @@
             <span class="icon">📲</span> Instalar App
         </button>
     </div>
-
+    
     <div id="modal-cadastro" class="modal-overlay">
     <div class="modal-card professional-ui">
         <div class="modal-header">
@@ -76,16 +76,19 @@
         <div id="box-preto" class="count-box">
             
             <span class="badge-vez">Sua Vez</span>
+            
             <div class="info-jogador">
                 <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
-                    <span id="icon-p">📷</span>
-                    <img id="img-preto">
-                    <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
-                </div>
-                <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">               
-                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
-                                
-            </div>
+            <span id="icon-p">📷</span>
+        <img id="img-preto">
+        <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
+    </div>
+    <span id="status-p" class="status-dot-placar"></span>
+    
+    <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">               
+    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+</div>
+            
             <div class="pontuacao">
                 <span class="count-label">Preto </span>
                 <span id="capturas-p" class="count">0</span>
@@ -104,13 +107,16 @@
             <span class="badge-vez badge-vermelha">Sua Vez</span>
             <div class="info-jogador">
                 <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
-                    <span id="icon-v">📷</span>
-                    <img id="img-vermelho">
-                    <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
-                </div>
-                <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" onchange="alterarNome('v')">
-                <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>            
-            </div>
+        <span id="icon-v">📷</span>
+        <img id="img-vermelho">
+        <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
+    </div>
+    <span id="status-v" class="status-dot-placar"></span>
+    
+    <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" onchange="alterarNome('v')">
+    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>            
+</div>
+                        
             <div class="pontuacao">
                 <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
                 <span id="capturas-v" class="count" style="color: #ff5f6d;">0</span>
