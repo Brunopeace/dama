@@ -6,6 +6,8 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /* Impede que elementos filhos criem rolagem acidental */
+    max-width: 100%; 
 }
 
 body {
@@ -14,10 +16,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 10px;
-    min-height: 100vh;
-    overflow-x: hidden;
+    padding: 5px; /* Reduzido de 10px para 5px */
+    height: 100vh; /* Mudado de min-height para height fixo */
+    width: 100vw;
+    overflow: hidden; /* TRAVA A ROLAGEM TOTAL */
+    position: fixed; /* Impede o "pulo" da barra de endereços no mobile */
 }
+
 
 .btn-sair {
     background: rgba(255, 255, 255, 0.1); /* Fundo branco com 10% de opacidade */
@@ -533,12 +538,13 @@ body.visao-preto .centro {
 .placar-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px; /* Reduzido de 12px */
     width: 100%;
     max-width: 400px;
-    margin: 15px auto;
+    margin: 5px auto; /* Reduzido de 15px */
     padding: 0 10px;
 }
+
 
 /* CAIXA DO JOGADOR (CARD) */
 .count-box {
@@ -546,7 +552,7 @@ body.visao-preto .centro {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    padding: 15px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -739,13 +745,14 @@ body.visao-preto .centro {
 #tabuleiro {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
-    width: 92vw;
-    height: 92vw;
-    max-width: 450px;
-    max-height: 450px;
+    width: 85vw; /* Reduzido de 92vw para dar margem de segurança */
+    height: 85vw; /* Reduzido de 92vw */
+    max-width: 400px; /* Reduzido de 450px */
+    max-height: 400px; /* Reduzido de 450px */
     border: 5px solid #333;
     border-radius: 5px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    margin: 0 auto;
 }
 
 .casa {
