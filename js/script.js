@@ -166,16 +166,31 @@ const vencedorRef = ref(db, 'partida_unica/vencedor');
 onValue(vencedorRef, (snap) => {
     const vencedorId = snap.val();
     
-    // Se existe um vencedor gravado no banco de dados
+    // 1. Se existe um vencedor gravado no banco de dados
     if (vencedorId) {
-        // Se eu sou o vencedor
         if (meuLado === vencedorId) {
             exibirModalVitoria(vencedorId.toUpperCase());
         } 
-        // Se o vencedor é o outro, então eu perdi
         else {
             exibirModalDerrota();
         }
+    } 
+    // 2. MELHORIA: Se o vencedorId for nulo (vazio), limpa a tela de quem ficou
+    else {
+        const telaV = document.getElementById('tela-vitoria');
+        const telaD = document.getElementById('tela-derrota');
+        
+        // Esconde o modal de vitória se ele estiver aberto
+        if (telaV) {
+            telaV.classList.remove('ativo');
+            telaV.style.display = 'none';
+        }
+        // Esconde o modal de derrota se ele estiver aberto
+        if (telaD) {
+            telaD.classList.remove('ativo');
+            telaD.style.display = 'none';
+        }
+           
     }
 });
 
@@ -614,51 +629,26 @@ function iniciarMonitoramentoOnline() {
 
         nomesAnteriores = { ...nomesAtuais };
     });
-
+    
     // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (SOMENTE MOVIMENTOS)
     onValue(ref(db, 'partida_unica'), (snapshot) => {
-    if (modoJogo !== 'online' || !snapshot.exists()) return;
-    
-    const data = snapshot.val();
-    
-    // 1. LÓGICA DE VENCEDOR (Sincronização de Fim de Jogo)
-    // Se houver um vencedor no banco, exibe o modal correto
-    if (data.vencedor) {
-        if (meuLado === data.vencedor) {
-            exibirModalVitoria(data.vencedor.toUpperCase());
-        } else {
-            exibirModalDerrota();
-        }
-    } else {
-        // Se NÃO houver vencedor no banco (ex: oponente saiu), esconde os modais
-        const telaV = document.getElementById('tela-vitoria');
-        const telaD = document.getElementById('tela-derrota');
+        if (modoJogo !== 'online' || !snapshot.exists()) return;
         
-        if (telaV && telaV.style.display !== 'none') {
-            telaV.style.display = 'none';
-            telaV.classList.remove('ativo');
-        }
-        if (telaD && telaD.style.display !== 'none') {
-            telaD.style.display = 'none';
-            telaD.classList.remove('ativo');
-        }
-    }
+        const data = snapshot.val();
+        // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
+        if (!data || !data.mapa) return;
 
-    // 2. LÓGICA DO TABULEIRO
-    // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
-    if (!data || !data.mapa) return;
+        // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
+        if (selecionada !== null) return;
 
-    // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
-    if (selecionada !== null) return;
-
-    mapa = data.mapa;
-    turno = data.turno;
-    capturasV = data.capturasV || 0;
-    capturasP = data.capturasP || 0;
-    
-    if (typeof desenhar === 'function') desenhar();
-    console.log("🔄 Tabuleiro e Status sincronizados via rede.");
-});
+        mapa = data.mapa;
+        turno = data.turno;
+        capturasV = data.capturasV || 0;
+        capturasP = data.capturasP || 0;
+        
+        if (typeof desenhar === 'function') desenhar();
+        console.log("🔄 Tabuleiro sincronizado via rede.");
+    });
 
     // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (IDs DO SEU HTML: img-vermelho, img-preto)
     onValue(ref(db, 'partida_unica/fotos'), (snap) => {
