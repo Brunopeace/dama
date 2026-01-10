@@ -1,13 +1,14 @@
-const CACHE_NAME = 'dama-v23';
+const CACHE_NAME = 'dama-v10';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/script.js',
-  '/img/icon-192.png',
-  '/img/icon-512.png',
-  '/movimento.mp3'
+  './',
+  './index.html',
+  './css/styles.css',
+  './js/script.js',
+  './img/icon-192.png',
+  './img/icon-512.png',
+  './movimento.mp3'
 ];
+
 
 // Instalação: Salva os arquivos no cache
 self.addEventListener('install', (event) => {
