@@ -767,17 +767,26 @@ function iniciarMonitoramentoOnline() {
 // nova função
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
+// --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
+
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
 // 1. Registrar presença (Faz você aparecer online para os outros)
 window.registrarPresenca = (nome) => {
     if (!nome) return;
-    const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     
-    // Define que você está online
-    set(minhaPresencaRef, { online: true, nome: nome });
+    // Usamos o nome original para exibir, mas a chave do banco será minúscula para evitar erros
+    const nomeKey = nome.trim().toLowerCase();
+    const minhaPresencaRef = ref(db, `usuarios_online/${nomeKey}`);
     
-    // Configura para remover automaticamente do Firebase se você fechar a aba ou cair a conexão
+    // Salva o status
+    set(minhaPresencaRef, { 
+        online: true, 
+        nome: nome.trim(), // Nome bonitinho para aparecer na lista
+        ultimaAtualizacao: Date.now() 
+    });
+    
+    // Remove do Firebase ao fechar a aba ou cair a rede
     import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
@@ -787,35 +796,31 @@ window.registrarPresenca = (nome) => {
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // Pega o que está escrito nos campos de nome do placar
-    const nomeVermelho = document.getElementById('input-nome-v')?.value;
-    const nomePreto = document.getElementById('input-nome-p')?.value;
+    // Pegamos os nomes atuais dos inputs e limpamos espaços/letras grandes
+    const nomeVermelho = document.getElementById('input-nome-v')?.value?.trim().toLowerCase();
+    const nomePreto = document.getElementById('input-nome-p')?.value?.trim().toLowerCase();
     
-    // Elementos das bolinhas (IDs conforme seu HTML)
+    // Elementos das bolinhas
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // --- LÓGICA PARA O LADO VERMELHO ---
+    // --- LÓGICA PARA O LADO VERMELHO (Quem vê é o Preto) ---
     if (dotV) {
-        // CONDIÇÃO: Eu sou o PRETO e o nome do VERMELHO está na lista de online
-        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho.trim()]) {
+        if (meuLado === 'preto' && nomeVermelho && jogadoresOnline[nomeVermelho]) {
             dotV.style.display = "inline-block";
             dotV.classList.add('online');
         } else {
-                
             dotV.style.display = "none";
             dotV.classList.remove('online');
         }
     }
 
-    // --- LÓGICA PARA O LADO PRETO ---
+    // --- LÓGICA PARA O LADO PRETO (Quem vê é o Vermelho) ---
     if (dotP) {
-        // CONDIÇÃO: Eu sou o VERMELHO e o nome do PRETO está na lista de online
         if (meuLado === 'vermelho' && nomePreto && jogadoresOnline[nomePreto]) {
             dotP.style.display = "inline-block";
             dotP.classList.add('online');
         } else {
-            // Se eu sou o Preto, eu não vejo minha própria bolinha
             dotP.style.display = "none";
             dotP.classList.remove('online');
         }
@@ -825,23 +830,27 @@ onValue(listaJogadoresRef, (snapshot) => {
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
-        for (let nome in jogadoresOnline) {
-            // Não mostra você mesmo na lista de convites
-            if (meuNome && nome === meuNome) continue; 
+        const meuNomeMinusculo = meuNome ? meuNome.toLowerCase() : "";
 
+        for (let chave in jogadoresOnline) {
+            // Se a chave (nome em minúsculo) for igual ao meu, pula
+            if (chave === meuNomeMinusculo) continue; 
+
+            const dados = jogadoresOnline[chave];
             const li = document.createElement('li');
             li.className = 'jogador-item';
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot online"></span>
-                    <span>${nome}</span>
+                    <span>${dados.nome}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')">CONVIDAR</button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nome}')">CONVIDAR</button>
             `;
             listaUl.appendChild(li);
         }
     }
 });
+
 
 
 
