@@ -685,10 +685,31 @@ function iniciarMonitoramentoOnline() {
     });
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // nova função
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
-// 1. Registrar presença (Chame isso dentro do confirmarCadastro)
+// 1. Registrar presença (Garante que você apareça para os outros)
 window.registrarPresenca = (nome) => {
     const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
     set(minhaPresencaRef, { online: true, nome: nome });
@@ -699,27 +720,35 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-// 2. Monitorar quem está online e atualizar a UI
+// 2. Monitorar quem está online e atualizar a UI (Placar + Painel)
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     
-    // --- PARTE A: Atualizar o Placar (Bolinhas ao lado do nome) ---
-    const nomeVermelho = document.getElementById('input-nome-v')?.value;
-    const nomePreto = document.getElementById('input-nome-p')?.value;
+    // Nomes atuais que estão escritos nos campos do placar
+    const nomeV = document.getElementById('input-nome-v')?.value;
+    const nomeP = document.getElementById('input-nome-p')?.value;
     
     const dotV = document.getElementById('status-v');
     const dotP = document.getElementById('status-p');
 
-    // Se o jogador vermelho estiver na lista de online, acende a luz
-    if (dotV) {
-        if (jogadoresOnline[nomeVermelho]) dotV.classList.add('online');
-        else dotV.classList.remove('online');
+    // --- LÓGICA PARA O JOGADOR VERMELHO ---
+    if (dotV && nomeV) {
+        // Fica online se: está no banco OU se o nome no campo é o MEU nome
+        if (jogadoresOnline[nomeV] || (meuNome && nomeV === meuNome)) {
+            dotV.classList.add('online');
+        } else {
+            dotV.classList.remove('online');
+        }
     }
 
-    // Se o jogador preto estiver na lista de online, acende a luz
-    if (dotP) {
-        if (jogadoresOnline[nomePreto]) dotP.classList.add('online');
-        else dotP.classList.remove('online');
+    // --- LÓGICA PARA O JOGADOR PRETO ---
+    if (dotP && nomeP) {
+        // Fica online se: está no banco OU se o nome no campo é o MEU nome
+        if (jogadoresOnline[nomeP] || (meuNome && nomeP === meuNome)) {
+            dotP.classList.add('online');
+        } else {
+            dotP.classList.remove('online');
+        }
     }
 
     // --- PARTE B: Atualizar o Painel Lateral de Amigos ---
@@ -727,7 +756,8 @@ onValue(listaJogadoresRef, (snapshot) => {
     if (listaUl) {
         listaUl.innerHTML = ""; 
         for (let nome in jogadoresOnline) {
-            if (nome === meuNome) continue; // Pula você mesmo
+            // Não mostra você mesmo na lista de "Amigos Online"
+            if (meuNome && nome === meuNome) continue; 
 
             const li = document.createElement('li');
             li.className = 'jogador-item';
@@ -742,6 +772,29 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
