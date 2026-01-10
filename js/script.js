@@ -435,30 +435,6 @@ if (modo === 'online') {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
     const nomeDigitado = nomeInput ? nomeInput.value.trim() : "";
@@ -485,12 +461,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (campoNome) campoNome.value = nomeDigitado;
 
     if (modoJogo === 'online') {
-        
-        // --- INICIALIZAÇÃO DO ÁUDIO (PEERJS) ---
-        if (typeof inicializarAudioOnline === 'function') {
-            inicializarAudioOnline(nomeDigitado);
-        }
-
         // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
@@ -504,10 +474,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
             pkg.onDisconnect(playerPhotoRef).remove();
-            
-            // Limpa o ID de áudio ao desconectar inesperadamente
-            const audioIdRef = ref(db, `partida_unica/audio_ids/${meuLado}`);
-            pkg.onDisconnect(audioIdRef).remove();
         });
 
         onValue(gameRef, (snap) => {
@@ -533,7 +499,10 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     // --- GATILHO INICIAL PARA IA ---
     if (modoJogo === 'ia') {
+        // Se eu sou vermelho, a IA é 2 (preto). Se eu sou preto, a IA é 1 (vermelho).
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
+        
+        // Se o turno atual do tabuleiro coincidir com o da IA, ela começa
         if (turno === idTurnoIA) {
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
@@ -541,25 +510,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -803,117 +753,6 @@ window.encerrarPartida = function() {
         window.location.reload();
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- // configurações do microfone 
-
-let peer;
-let localStream;
-let call;
-
-// Inicializa o PeerJS quando o jogo começa online
-function inicializarAudioOnline(meuNome) {
-    // Criamos um ID único baseado no nome e lado para evitar conflitos
-    const peerId = `damas-${meuNome}-${meuLado}`.replace(/\s+/g, '-');
-    
-    peer = new Peer(peerId);
-
-    peer.on('open', (id) => {
-        console.log('ID do áudio ativo:', id);
-        // Salva seu ID no Firebase para o oponente saber
-        set(ref(db, `partida_unica/audio_ids/${meuLado}`), id);
-    });
-
-    // Escuta quando o oponente liga para você
-    peer.on('call', (incomingCall) => {
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            incomingCall.answer(stream); // Atende a chamada com seu áudio
-            incomingCall.on('stream', (remoteStream) => {
-                document.getElementById('remote-audio').srcObject = remoteStream;
-            });
-        });
-    });
-}
-
-window.toggleAudio = async function() {
-    const btn = document.getElementById('btn-mic');
-    const icon = document.getElementById('mic-icon');
-
-    if (!localStream) {
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            btn.classList.add('mic-ativo');
-            icon.innerText = '🔊';
-
-            // Tenta ligar para o oponente
-            const outroLado = meuLado === 'vermelho' ? 'preto' : 'vermelho';
-            get(ref(db, `partida_unica/audio_ids/${outroLado}`)).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const oponentePeerId = snapshot.val();
-                    const call = peer.call(oponentePeerId, localStream);
-                    
-                    call.on('stream', (remoteStream) => {
-                        document.getElementById('remote-audio').srcObject = remoteStream;
-                    });
-                }
-            });
-        } catch (err) {
-            console.error("Erro ao acessar microfone:", err);
-            alert("Ligue o microfone nas permissões do navegador.");
-        }
-    } else {
-        // Desliga o microfone
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-        btn.classList.remove('mic-ativo');
-        icon.innerText = '🎤';
-    }
-};
-
-// microfone termina aqui
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 🟢 função reiniciar
  
