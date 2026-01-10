@@ -617,23 +617,48 @@ function iniciarMonitoramentoOnline() {
 
     // 2. MONITOR DE SINCRONIZAÇÃO DO TABULEIRO (SOMENTE MOVIMENTOS)
     onValue(ref(db, 'partida_unica'), (snapshot) => {
-        if (modoJogo !== 'online' || !snapshot.exists()) return;
+    if (modoJogo !== 'online' || !snapshot.exists()) return;
+    
+    const data = snapshot.val();
+    
+    // 1. LÓGICA DE VENCEDOR (Sincronização de Fim de Jogo)
+    // Se houver um vencedor no banco, exibe o modal correto
+    if (data.vencedor) {
+        if (meuLado === data.vencedor) {
+            exibirModalVitoria(data.vencedor.toUpperCase());
+        } else {
+            exibirModalDerrota();
+        }
+    } else {
+        // Se NÃO houver vencedor no banco (ex: oponente saiu), esconde os modais
+        const telaV = document.getElementById('tela-vitoria');
+        const telaD = document.getElementById('tela-derrota');
         
-        const data = snapshot.val();
-        // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
-        if (!data || !data.mapa) return;
+        if (telaV && telaV.style.display !== 'none') {
+            telaV.style.display = 'none';
+            telaV.classList.remove('ativo');
+        }
+        if (telaD && telaD.style.display !== 'none') {
+            telaD.style.display = 'none';
+            telaD.classList.remove('ativo');
+        }
+    }
 
-        // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
-        if (selecionada !== null) return;
+    // 2. LÓGICA DO TABULEIRO
+    // Se houver dados mas não houver mapa (limpeza parcial), ignora para não bugar
+    if (!data || !data.mapa) return;
 
-        mapa = data.mapa;
-        turno = data.turno;
-        capturasV = data.capturasV || 0;
-        capturasP = data.capturasP || 0;
-        
-        if (typeof desenhar === 'function') desenhar();
-        console.log("🔄 Tabuleiro sincronizado via rede.");
-    });
+    // Trava de segurança: não sobrescreve o mapa se você estiver com uma peça na mão
+    if (selecionada !== null) return;
+
+    mapa = data.mapa;
+    turno = data.turno;
+    capturasV = data.capturasV || 0;
+    capturasP = data.capturasP || 0;
+    
+    if (typeof desenhar === 'function') desenhar();
+    console.log("🔄 Tabuleiro e Status sincronizados via rede.");
+});
 
     // 3. 🔥 SINCRONIZAÇÃO DE FOTOS (IDs DO SEU HTML: img-vermelho, img-preto)
     onValue(ref(db, 'partida_unica/fotos'), (snap) => {
@@ -718,6 +743,27 @@ window.salvarNoFirebase = (novoTurno = turno) => {
     });
 
 };
+
+
+window.encerrarPartida = function() {
+    // 1. Se for modo online, precisamos limpar o vencedor do banco
+    if (modoJogo === 'online') {
+        const vencedorRef = ref(db, 'partida_unica/vencedor');
+        
+        // Remove a informação do vencedor para que o modal não volte
+        remove(vencedorRef).then(() => {
+            // Só recarrega a página depois que o Firebase confirmar a exclusão
+            window.location.reload();
+        }).catch(() => {
+            // Caso dê erro na rede, recarrega mesmo assim
+            window.location.reload();
+        });
+    } else {
+        // Se for contra a IA, basta recarregar
+        window.location.reload();
+    }
+};
+
 
 // 🟢 função reiniciar
  
