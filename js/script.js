@@ -22,7 +22,7 @@ const firebaseConfig = {
 // Inicialização
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
+let meuNome = "";
 // 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
@@ -446,6 +446,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
+    meuNome = nomeDigitado; // Garante que a variável global de nome esteja preenchida
     mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
@@ -461,19 +462,27 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (campoNome) campoNome.value = nomeDigitado;
 
     if (modoJogo === 'online') {
+        // --- REGISTRAR PRESENÇA ONLINE (NOVO) ---
+        if (typeof registrarPresenca === 'function') {
+            registrarPresenca(nomeDigitado);
+        }
+
         // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
+        const minhaPresencaRef = ref(db, `usuarios_online/${nomeDigitado}`);
 
         set(playerStatusRef, true);
         set(playerNameRef, nomeDigitado);
         
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO (ATUALIZADO)
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
             pkg.onDisconnect(playerPhotoRef).remove();
+            // Também remove o status de "Online" da lista global ao desconectar
+            pkg.onDisconnect(minhaPresencaRef).remove();
         });
 
         onValue(gameRef, (snap) => {
@@ -499,10 +508,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     // --- GATILHO INICIAL PARA IA ---
     if (modoJogo === 'ia') {
-        // Se eu sou vermelho, a IA é 2 (preto). Se eu sou preto, a IA é 1 (vermelho).
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
-        
-        // Se o turno atual do tabuleiro coincidir com o da IA, ela começa
         if (turno === idTurnoIA) {
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
@@ -679,6 +685,64 @@ function iniciarMonitoramentoOnline() {
     });
 }
 
+// nova função
+const listaJogadoresRef = ref(db, 'usuarios_online');
+
+// 1. Registrar presença (Chame isso dentro do confirmarCadastro)
+window.registrarPresenca = (nome) => {
+    const minhaPresencaRef = ref(db, `usuarios_online/${nome}`);
+    set(minhaPresencaRef, { online: true, nome: nome });
+    
+    // Configura para remover do Firebase se a aba for fechada
+    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+        pkg.onDisconnect(minhaPresencaRef).remove();
+    });
+};
+
+// 2. Monitorar quem está online e atualizar a UI
+onValue(listaJogadoresRef, (snapshot) => {
+    const jogadoresOnline = snapshot.val() || {};
+    
+    // --- PARTE A: Atualizar o Placar (Bolinhas ao lado do nome) ---
+    const nomeVermelho = document.getElementById('input-nome-v')?.value;
+    const nomePreto = document.getElementById('input-nome-p')?.value;
+    
+    const dotV = document.getElementById('status-v');
+    const dotP = document.getElementById('status-p');
+
+    // Se o jogador vermelho estiver na lista de online, acende a luz
+    if (dotV) {
+        if (jogadoresOnline[nomeVermelho]) dotV.classList.add('online');
+        else dotV.classList.remove('online');
+    }
+
+    // Se o jogador preto estiver na lista de online, acende a luz
+    if (dotP) {
+        if (jogadoresOnline[nomePreto]) dotP.classList.add('online');
+        else dotP.classList.remove('online');
+    }
+
+    // --- PARTE B: Atualizar o Painel Lateral de Amigos ---
+    const listaUl = document.getElementById('lista-jogadores');
+    if (listaUl) {
+        listaUl.innerHTML = ""; 
+        for (let nome in jogadoresOnline) {
+            if (nome === meuNome) continue; // Pula você mesmo
+
+            const li = document.createElement('li');
+            li.className = 'jogador-item';
+            li.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-dot online"></span>
+                    <span>${nome}</span>
+                </div>
+                <button class="btn-desafiar" onclick="desafiarJogador('${nome}')">CONVIDAR</button>
+            `;
+            listaUl.appendChild(li);
+        }
+    }
+});
+
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
     const alerta = document.createElement('div');
@@ -733,7 +797,6 @@ window.salvarNoFirebase = (novoTurno = turno) => {
     });
 
 };
-
 
 window.encerrarPartida = function() {
     // 1. Se for modo online, precisamos limpar o vencedor do banco
@@ -963,7 +1026,7 @@ function clicar(r, c) {
         const todasAsJogadas = obterTodosMvs(mapa, turno);
         const capturasObrigatorias = todasAsJogadas.filter(m => m.cap);
 
-        // ⚠️ LEI DA CAPTURA (SOPRO): Força captura se existir uma disponível
+        // LEI DA CAPTURA (SOPRO): Força captura se existir uma disponível
         if (capturasObrigatorias.length > 0) {
             const estaPecaPodeComer = capturasObrigatorias.some(
                 m => m.de.r === r && m.de.c === c
@@ -1516,7 +1579,7 @@ function exibirModalDerrota() {
 
 window.sairDoJogo = async function() {
     if (modoJogo === 'online') {
-        const confirmacao = confirm("Deseja realmente sair da partida? Isso encerrará o jogo para ambos.");
+        const confirmacao = confirm("Deseja realmente sair da partida?");
         if (!confirmacao) return;
 
         try {
@@ -1531,9 +1594,7 @@ window.sairDoJogo = async function() {
             // Apagar 'partida_unica' reinicia o jogo para todos os conectados
             await remove(ref(db, 'partida_unica'));
 
-            console.log("Partida encerrada e dados removidos.");
         } catch (error) {
-            console.error("Erro ao sair do jogo:", error);
         }
     }
 
