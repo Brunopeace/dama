@@ -730,32 +730,110 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-// 2. Ouvinte principal do Firebase
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// --- LÓGICA DO LOBBY COM BOLINHA PULSANTE ---
+
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
-    atualizarBolinhasStatus(jogadoresOnline);
+    
+    // 1. Atualiza as bolinhas no placar (se já estiver em jogo)
+    if (typeof atualizarBolinhasStatus === 'function') {
+        atualizarBolinhasStatus(jogadoresOnline);
+    }
 
-    // Atualiza lista lateral
+    // 2. Atualiza a lista lateral/menu
     const listaUl = document.getElementById('lista-jogadores');
+    
     if (listaUl) {
         listaUl.innerHTML = ""; 
+        
+        // Convertemos o nome do usuário local para minúsculo para comparar
         const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
-        for (let chave in jogadoresOnline) {
-            if (chave === meuNomeRef) continue; 
+
+        Object.keys(jogadoresOnline).forEach(chave => {
+            // Se for eu mesmo, não mostro na lista
+            if (chave === meuNomeRef) return; 
+
             const dados = jogadoresOnline[chave];
+            // Usa o nome salvo ou a chave caso o nome falhe
+            const nomeParaMostrar = dados.nome || chave;
+
             const li = document.createElement('li');
             li.className = 'jogador-item';
+            
+            // Note o uso da classe 'status-dot-placar online' para ativar o efeito piscante
             li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="status-dot online"></span>
-                    <span>${dados.nomeExibicao || chave}</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="status-dot-placar online"></span>
+                    <span style="color: white; font-weight: 500; font-size: 14px;">${nomeParaMostrar}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${nomeParaMostrar}')">
+                    CONVIDAR
+                </button>
             `;
             listaUl.appendChild(li);
+        });
+
+        // Se não houver ninguém online além de você
+        if (listaUl.innerHTML === "") {
+            listaUl.innerHTML = `
+                <div style="text-align:center; padding: 10px; color: #888;">
+                    <p style="font-size: 13px;">Nenhum oponente online</p>
+                </div>
+            `;
         }
     }
 });
+
+// Função para quando clicar no botão CONVIDAR
+window.desafiarJogador = (nomeOponente) => {
+    console.log("Convidando: " + nomeOponente);
+    // Por enquanto, mostra o alerta. Próximo passo seria criar a sala no Firebase.
+    alert("Convite enviado para " + nomeOponente + "!\nAguardando confirmação...");
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
