@@ -329,11 +329,11 @@ body.visao-preto .centro {
 
 .btn-voltar-menu {
     background: transparent;
-    color: #666;
-    border: 2px solid #333;
+    color: #ffffff;
+    border: 2px solid #ffffff;
     padding: 12px;
     border-radius: 15px;
-    font-weight: 800;
+    font-weight: bold;
     text-transform: uppercase;
     cursor: pointer;
     transition: 0.3s;
