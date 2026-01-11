@@ -482,16 +482,20 @@ if (modo === 'online') {
 
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
-    const nomeDigitado = nomeInput ? nomeInput.value.trim() : "";
+    // Pegamos o nome bruto para exibição e limpamos espaços
+    const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
+    
+    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização
+    const nomeFormatado = nomeOriginal.toLowerCase();
 
-    if (nomeDigitado === "") {
+    if (nomeOriginal === "") {
         alert("Por favor, digite seu nome!");
         return;
     }
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
-    meuNome = nomeDigitado; 
+    meuNome = nomeFormatado; // Salvamos o nome formatado globalmente
     mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
@@ -501,31 +505,33 @@ window.confirmarCadastro = (ladoEscolhido) => {
         document.body.classList.remove('visao-preto');
     }
 
-    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR
+    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Exibimos o original para o usuário)
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     const campoNome = document.getElementById(idMeuInput);
-    if (campoNome) campoNome.value = nomeDigitado;
+    if (campoNome) campoNome.value = nomeOriginal;
 
     if (modoJogo === 'online') {
-        // --- REGISTRAR PRESENÇA ONLINE ---
-        // Isso faz com que o oponente consiga te ver
-        const minhaPresencaRef = ref(db, `usuarios_online/${nomeDigitado}`);
-        set(minhaPresencaRef, { online: true, nome: nomeDigitado });
+        // --- REGISTRAR PRESENÇA ONLINE (USANDO NOME FORMATADO) ---
+        // A chave no banco será sempre minúscula agora
+        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
+        set(minhaPresencaRef, { online: true, nome: nomeOriginal });
 
         // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
-        const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
+        // No Firebase da partida, usamos 'v' ou 'p' conforme seu monitoramento anterior
+        const chaveLado = (ladoEscolhido === 'vermelho') ? 'v' : 'p';
+        const playerNameRef = ref(db, `partida_unica/nomes/${chaveLado}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
 
         set(playerStatusRef, true);
-        set(playerNameRef, nomeDigitado);
+        set(playerNameRef, nomeOriginal);
         
         // 5. CONFIGURAÇÃO DE DESCONEXÃO
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
             pkg.onDisconnect(playerPhotoRef).remove();
-            pkg.onDisconnect(minhaPresencaRef).remove(); // Remove você da lista online ao fechar
+            pkg.onDisconnect(minhaPresencaRef).remove(); // Remove da lista online ao fechar
         });
 
         onValue(gameRef, (snap) => {
@@ -544,7 +550,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
     const modal = document.getElementById('modal-cadastro');
     if (modal) modal.style.display = 'none';
     
-    const selecaoLado = document.getElementById('side-selection'); // Ajustado para o ID do seu HTML
+    const selecaoLado = document.getElementById('side-selection');
     if (selecaoLado) selecaoLado.style.display = 'none';
 
     desenhar();
@@ -558,22 +564,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -631,7 +621,7 @@ function iniciarMonitoramentoFotos() {
 }
 
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
-// --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
+
 function iniciarMonitoramentoOnline() {
     if (modoJogo !== 'online') return;
 
@@ -758,20 +748,7 @@ function iniciarMonitoramentoOnline() {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-            
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
-
-// --- SISTEMA DE STATUS ONLINE (VERSÃO FINAL PARA PWA/MOBILE) ---
 
 const listaJogadoresRef = ref(db, 'usuarios_online');
 
@@ -857,41 +834,6 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
-// ✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅✅
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
