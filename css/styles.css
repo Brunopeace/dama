@@ -1,1182 +1,182 @@
-/* RESET E CONFIGURAÇÕES GERAIS */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    /* Impede que elementos filhos criem rolagem acidental */
-    max-width: 100%; 
-}
-
-body {
-    background-color: #121212;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 5px; /* Reduzido de 10px para 5px */
-    height: 100vh; /* Mudado de min-height para height fixo */
-    width: 100vw;
-    overflow: hidden; /* TRAVA A ROLAGEM TOTAL */
-    position: fixed; /* Impede o "pulo" da barra de endereços no mobile */
-}
-
-
-.btn-sair {
-    background: rgba(255, 255, 255, 0.1); /* Fundo branco com 10% de opacidade */
-    color: #ffffff;
-    border: 1px solid #ffffff;
-    padding: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: all 0.3s ease; /* Suaviza o efeito ao passar o mouse */
-    font-weight: bold;
-    width: 80px;
-}
-
-.btn-sair:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-}
-
-/* Container principal */
-#game-layout {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    width: 100%;
-}
-
-/* Configuração de ordem padrão (Vermelho em baixo) */
-#container-topo { order: 1; } /* Preto inicia no topo */
-.centro         { order: 2; } /* Tabuleiro sempre no meio */
-#container-base { order: 3; } /* Vermelho inicia na base */
-
-/* INVERSÃO: Quando o jogador for o PRETO */
-body.visao-preto #container-topo {
-    order: 3; /* Placar Preto desce para a base */
-}
-
-body.visao-preto #container-base {
-    order: 1; /* Placar Vermelho sobe para o topo */
-}
-
-/* Garante que o tabuleiro não mude de lugar na inversão */
-body.visao-preto .centro {
-    order: 2;
-}
-
-/* FEEDBACK DE ENTRADA */
-.feedback-entrada {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1a1a1a;
-    color: #ffce00;
-    padding: 12px 25px;
-    border-radius: 50px;
-    border: 1px solid #ffce00;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 11000;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    /* Animação de entrada rápida (0.5s) */
-    animation: subirEntrada 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    /* Transição suave para quando mudarmos a opacidade no JS */
-    transition: opacity 1s ease, transform 1s ease;
-}
-
-@keyframes subirEntrada {
-    from { transform: translate(-50%, 50px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
-}
-
-/* FEEDBACK DE SAÍDA */
-.feedback-saida {
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 12px 25px;
-    border-radius: 50px;
-    border: 1px solid #ff5f6d;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    z-index: 11000;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    /* Animação de entrada rápida (0.5s) */
-    animation: descerSaida 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-    /* Transição suave para o sumiço */
-    transition: opacity 1s ease, transform 1s ease;
-}
-
-@keyframes descerSaida {
-    from { transform: translate(-50%, -50px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
-}
-
-/* CONTAINER DO BOTÃO PWA - FIXO NA LATERAL DIREITA */
-#pwa-install-container {
-    position: fixed;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10001; /* Fica acima de quase tudo */
-    display: flex;
-    justify-content: flex-end;
-}
-
-/* BOTÃO DE INSTALAÇÃO HORIZONTAL ESTILO ABA */
-.btn-pwa {
-    background: rgba(20, 20, 20, 0.9); /* Fundo sólido para leitura */
-    border: 2px solid #ffce00;
-    border-right: none; /* Remove a borda encostada na tela */
-    color: #ffce00;
-    padding: 12px 18px;
-    border-radius: 30px 0 0 30px; /* Arredondado só no lado esquerdo */
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    backdrop-filter: blur(10px);
-    box-shadow: -5px 5px 15px rgba(0, 0, 0, 0.5);
-    white-space: nowrap; /* Garante que o texto fique em uma linha só */
-}
-
-/* EFEITO AO PASSAR O MOUSE OU TOCAR */
-.btn-pwa:hover {
-    background: #ffce00;
-    color: #000;
-    padding-right: 30px; /* Dá a sensação de que o botão "saiu" mais da borda */
-}
-
-.btn-pwa:active {
-    transform: scale(0.95);
-}
-
-.btn-pwa .icon {
-    font-size: 20px;
-}
-
-/* ANIMAÇÃO DE PULSAÇÃO (Sutil na lateral) */
-@keyframes pulse-pwa {
-    0% { transform: translateX(0); }
-    50% { transform: translateX(-5px); } /* O botão dá uma "espiadinha" para a esquerda */
-    100% { transform: translateX(0); }
-}
-
-#pwa-install-container {
-    animation: pulse-pwa 2s infinite ease-in-out;
-}
-
-/* AJUSTE PARA O S23 FE NÃO CORTAR O TABULEIRO */
-@media (max-width: 500px) {
-    .btn-pwa {
-        padding: 10px 14px;
-        font-size: 12px;
-        opacity: 0.9; /* Um pouco mais transparente para não distrair */
-    }
-}
-
-/* UI Profissional */
-.professional-ui {
-    max-width: 400px;
-    width: 90%;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    padding: 40px 30px !important;
-}
-
-/* modal perdeu */
-
-.modal-perdeu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(10, 5, 5, 0.9); /* Fundo quase preto */
-    backdrop-filter: blur(12px) grayscale(50%); /* Desfoca e tira a cor do fundo */
-    -webkit-backdrop-filter: blur(12px) grayscale(50%);
-    display: none; 
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    opacity: 0;
-    transition: all 0.4s ease;
-}
-
-.modal-perdeu-overlay.ativo {
-    opacity: 1;
-}
-
-/* O Card com Estilo Gaming (Dark UI + Neon) */
-.card-perdeu-nativo {
-    background: #1a1a1a; /* Fundo escuro gamer */
-    width: 85%;
-    max-width: 360px;
-    padding: 40px 25px;
-    border-radius: 30px;
-    text-align: center;
-    border: 3px solid #ff4757; /* Borda de destaque */
-    box-shadow: 0 0 30px rgba(255, 71, 87, 0.4), inset 0 0 15px rgba(0,0,0,0.5); /* Brilho externo neon */
-    transform: scale(0.7) rotate(-5deg); /* Surge com uma leve rotação */
-    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    position: relative;
-    overflow: hidden;
-}
-
-.modal-perdeu-overlay.ativo .card-perdeu-nativo {
-    transform: scale(1) rotate(0deg);
-}
-
-/* Badge Superior com brilho */
-.status-badge {
-    background: #ff4757;
-    color: white;
-    font-size: 12px;
-    font-weight: 900;
-    padding: 6px 18px;
-    border-radius: 0 0 15px 15px;
-    display: inline-block;
-    letter-spacing: 2px;
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    box-shadow: 0 5px 15px rgba(255, 71, 87, 0.5);
-    text-transform: uppercase;
-}
-
-.emoji-main {
-    font-size: 80px;
-    margin: 20px 0 10px;
-    filter: drop-shadow(0 0 10px rgba(255,255,255,0.2));
-    animation: tremor 0.5s infinite; /* Efeito de tremer de frustração */
-}
-
-@keyframes tremor {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    20% { transform: translate(-1px, -2px) rotate(-1deg); }
-    40% { transform: translate(-3px, 0px) rotate(1deg); }
-    60% { transform: translate(3px, 2px) rotate(0deg); }
-    80% { transform: translate(1px, -1px) rotate(1deg); }
-    100% { transform: translate(-1px, 2px) rotate(-1deg); }
-}
-
-.titulo-perdeu {
-    color: #fff;
-    font-size: 32px;
-    font-weight: 900;
-    margin-bottom: 10px;
-    text-transform: uppercase;
-    font-family: 'Arial Black', sans-serif;
-    letter-spacing: -1px;
-    text-shadow: 2px 2px 0px #ff4757;
-}
-
-.texto-perdeu {
-    color: #aaa;
-    font-size: 16px;
-    margin-bottom: 30px;
-    font-weight: 500;
-}
-
-/* Botões Estilo "Start" */
-.acoes-modal {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.btn-reiniciar-primario {
-    background: #fff;
-    color: #1a1a1a;
-    border: none;
-    padding: 18px;
-    border-radius: 15px;
-    font-size: 18px;
-    font-weight: 900;
-    text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 6px 0px #cccccc; /* Efeito de botão 3D */
-    transition: all 0.1s;
-}
-
-.btn-reiniciar-primario:hover {
-    background: #ff4757;
-    color: white;
-    box-shadow: 0 6px 0px #b33939;
-}
-
-.btn-reiniciar-primario:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0px #b33939;
-}
-
-.btn-voltar-menu {
-    background: transparent;
-    color: #ffffff;
-    border: 2px solid #ffffff;
-    padding: 12px;
-    border-radius: 15px;
-    font-weight: bold;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.btn-voltar-menu:hover {
-    color: #fff;
-    border-color: #ff4757;
-}
-
-/* fim */
-
-.modal-header {
-    margin-bottom: 25px;
-    }
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DAMA ONLINE</title>
+    <link rel="icon" href="img/icon-512.png">
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+     
+    <div id="pwa-install-container" style="display: none;">
+        <button id="btn-instalar" class="btn-pwa">
+            <span class="icon">📲</span> Instalar App
+        </button>
+    </div>
     
-.logo-circle {
-    width: 70px; height: 70px;
-    background: #222;
-    border-radius: 50%;
-    margin: 0 auto 15px;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid #ffce00;
-}
-.logo-img { width: 45px; height: 45px; }
+    <div id="modal-cadastro" class="modal-overlay">
+        <div class="modal-card professional-ui">
+            <div class="modal-header">
+                <div class="logo-circle">
+                    <img src="img/icon-192.png" alt="Logo" class="logo-img">
+                </div>
+                <h2 id="modal-titulo">Damas Online</h2>
+                <p id="modal-subtitulo">Acesse sua conta para jogar</p>
+            </div>
 
-.input-group label {
-    display: block; font-size: 13px; color: #888;
-    margin-bottom: 8px; text-align: left;
-}
+            <div class="modal-body">
+                <div id="area-login">
+                    <div class="input-group">
+                        <label for="modal-input-nome">Nome de Usuário</label>
+                        <div class="input-with-icon">
+                            <span class="icon">👤</span>
+                            <input type="text" id="modal-input-nome" placeholder="Seu apelido cadastrado..." maxlength="12">
+                        </div>
+                    </div>
+                    <button class="btn-confirmar" onclick="fazerLogin()">ENTRAR NO JOGO</button>
+                    <p class="trocar-tela">Não tem conta? <a href="#" onclick="alternarModal(true)">Cadastre-se aqui</a></p>
+                </div>
 
-.input-with-icon {
-    position: relative;
-    display: flex; align-items: center;
-}
+                <div id="area-cadastro" style="display: none;">
+                    <div class="input-group">
+                        <label for="reg-input-nome">Criar Novo Usuário</label>
+                        <div class="input-with-icon">
+                            <span class="icon">📝</span>
+                            <input type="text" id="reg-input-nome" placeholder="Escolha um nome único..." maxlength="12">
+                        </div>
+                    </div>
+                    <button class="btn-confirmar" style="background: #28a745;" onclick="criarNovaConta()">CRIAR MINHA CONTA</button>
+                    <p class="trocar-tela">Já tem conta? <a href="#" onclick="alternarModal(false)">Fazer Login</a></p>
+                </div>
 
-.input-with-icon .icon { position: absolute; left: 15px; }
+                <div id="pos-login-fluxo" style="display: none;">
+                    <div class="step-label">Selecione o modo de jogo</div>
+                    <div class="modo-grid">
+                        <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
+                            <span class="card-icon">🤖</span>
+                            <div class="card-info">
+                                <span class="card-title">Treinamento</span>
+                                <span class="card-desc">Contra a Máquina</span>
+                            </div>
+                        </div>
+                        <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
+                            <span class="card-icon">🌐</span>
+                            <div class="card-info">
+                                <span class="card-title">Competitivo</span>
+                                <span class="card-desc">Partida Online</span>
+                            </div>
+                        </div>
+                    </div>
 
-.input-with-icon input {
-    width: 100%; padding: 14px 14px 14px 45px !important;
-    background: #252525 !important;
-    border: 1px solid #333 !important;
-    border-radius: 12px !important;
-    margin-bottom: 0 !important;
-    color: yellow !important;
-}
+                    <div id="side-selection" class="side-container" style="display: none;">
+                        <div class="step-label">Escolha sua cor</div>
+                        <div class="side-grid">
+                            <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
+                                <span class="dot"></span> Vermelho
+                            </button>
+                            <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
+                                <span class="dot"></span> Preto
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-/* Grid de Opções */
-.modo-grid { display: grid; gap: 12px; margin-top: 10px; }
+                <div id="painel-lobby" class="lobby-container" style=" margin-top: 20px;">
+                    <div class="lobby-header">
+                        <span class="status-dot-placar online"></span>
+                        <h3>Jogadores Online</h3>
+                    </div>
+                    <ul id="lista-jogadores"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
-.option-card {
-    background: #252525;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 15px;
-    display: flex; align-items: center;
-    gap: 15px; cursor: pointer;
-    transition: all 0.2s ease;
-}
+    <div id="game-layout">
+        <div class="placar-container" id="container-topo">
+            <div id="box-preto" class="count-box">
+                <span class="badge-vez">Sua Vez</span>
+                <div class="info-jogador">
+                    <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
+                        <span id="icon-p">📷</span>
+                        <img id="img-preto">
+                        <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
+                    </div>
+                    <span id="status-p" class="status-dot-placar"></span>
+                    <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" readonly>               
+                    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+                </div>
+                <div class="pontuacao">
+                    <span class="count-label">Preto </span>
+                    <span id="capturas-p" class="count">0</span>
+                </div>
+            </div>
+        </div>
 
-.option-card:hover {
-    border-color: #555;
-    background: #2a2a2a;
-    }
+        <div class="centro">
+            <div id="msg-erro"></div>
+            <div id="tabuleiro"></div>
+        </div>
 
-.option-card.selected {
-    border-color: #ffce00;
-    background: rgba(255, 206, 0, 0.05);
-}
+        <div class="placar-container" id="container-base">
+            <div id="box-vermelho" class="count-box">
+                <span class="badge-vez badge-vermelha">Sua Vez</span>
+                <div class="info-jogador">
+                    <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
+                        <span id="icon-v">📷</span>
+                        <img id="img-vermelho">
+                        <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
+                    </div>
+                    <span id="status-v" class="status-dot-placar"></span>
+                    <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" readonly>
+                    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>            
+                </div>
+                <div class="pontuacao">
+                    <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
+                    <span id="capturas-v" class="count" style="color: #ff5f6d;">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-.card-icon {
-    font-size: 24px;
-    }
+    <div id="modal-emoji-selecao" class="emoji-picker-overlay">
+        <div class="emoji-list">
+            <span onclick="enviarEmoji('😊')">😊</span>
+            <span onclick="enviarEmoji('😂')">😂</span>
+            <span onclick="enviarEmoji('😠')">😠</span>
+            <span onclick="enviarEmoji('😮')">😮</span>
+            <span onclick="enviarEmoji('😎')">😎</span>
+        </div>
+    </div>
+
+    <div id="tela-vitoria">
+        <div class="vitoria-card">
+            <div style="font-size: 50px; margin-bottom: 10px;">🏆</div>
+            <h2 id="vencedor-texto">VITÓRIA!</h2>
+            <p class="vitoria-subtexto">Partida encerrada com sucesso.</p>
+            <button class="btn-novo-jogo" onclick="reiniciar()">JOGAR NOVAMENTE ?</button>
+            <button class="btn-voltar-menu" onclick="encerrarPartida()">SAIR</button>
+        </div>
+    </div>
     
-.card-title {
-    display: block;
-    font-weight: bold;
-    font-size: 15px;
-    }
-.card-desc {
-    font-size: 12px;
-    color: #777;
-    }
-
-/* Botões de Lado */
-.side-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
-    }
+    <div id="tela-derrota" class="modal-perdeu-overlay" style="display: none;">
+        <div class="card-perdeu-nativo">
+            <div class="status-badge">PARTIDA ENCERRADA</div>
+            <div class="emoji-main">😭</div>
+            <h2 class="titulo-perdeu">VOCÊ PERDEU</h2>
+            <p class="texto-perdeu">Não foi dessa vez!<br>Seu adversário foi melhor.</p>
+            <div class="acoes-modal">
+                <button class="btn-reiniciar-primario" onclick="reiniciar()">
+                    <span class="icon">🔄</span> JOGAR NOVAMENTE ?
+                </button>
+                <button class="btn-voltar-menu" onclick="encerrarPartida()">SAIR</button>
+            </div>
+        </div>
+    </div>
     
-.side-btn {
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-.side-btn.red {
-    background: #b91d1d;
-    color: white;
-    }
-    
-.side-btn.black {
-    background: #000;
-    color: white;
-    border: 1px solid #333;
-    }
-    
-.side-btn .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: white;
-    }
-
-.input-nome:disabled {
-    background: transparent;
-    border: none;
-    color: #aaa;
-    cursor: default;
-}
-
-.peca-voadora {
-    position: fixed;
-    z-index: 10000;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    pointer-events: none;
-    /* Transições diferentes para cada eixo cria o efeito de curva (parábola) */
-    transition: left 0.8s linear, 
-                top 0.8s cubic-bezier(0.3, -0.5, 0.7, 1.5), 
-                transform 0.8s ease-in-out, 
-                opacity 0.8s ease-in;
-    background-size: cover;
-    background-position: center;
-}
-
-.peca-voadora.peca-vermelha {
-    background: radial-gradient(circle at 35% 35%, #ff5f6d, #b91d1d);
-    border: 2px solid #fff;
-}
-
-.peca-voadora.peca-preta {
-    background: radial-gradient(circle at 35% 35%, #4a4a4a, #000);
-    border: 2px solid #666;
-}
-
-/* INDICADORES DE TURNO ATIVO */
-.turno-ativo-vermelho {
-    border-color: #ff5f6d;
-    box-shadow: 0 0 15px rgba(255, 95, 109, 0.4);
-    background: #251a1a;
-}
-
-.turno-ativo-preto {
-    border-color: #ffce00;
-    box-shadow: 0 0 15px rgba(255, 206, 0, 0.4);
-    background: #25251a;
-}
-
-.turno-ativo-vermelho .badge-vez,
-.turno-ativo-preto .badge-vez {
-    display: block;
-}
-
-/* Estilo do Emoji Flutuante */
-.floating-emoji {
-    position: fixed;
-    font-size: 40px;
-    z-index: 9999;
-    pointer-events: none;
-    animation: floatUpAndFade 2.5s ease-out forwards;
-}
-
-@keyframes floatUpAndFade {
-    0% {
-        transform: translateY(0) scale(0.5);
-        opacity: 0;
-    }
-    20% {
-        transform: translateY(-20px) scale(1.2);
-        opacity: 1;
-    }
-    80% {
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(-150px) scale(1);
-        opacity: 0;
-    }
-}
-
-/* CONTAINER PRINCIPAL DO PLACAR */
-.placar-container {
-    display: flex;
-    flex-direction: column;
-    gap: 8px; /* Reduzido de 12px */
-    width: 100%;
-    max-width: 400px;
-    margin: 5px auto; /* Reduzido de 15px */
-    padding: 0 10px;
-}
-
-
-/* CAIXA DO JOGADOR (CARD) */
-.count-box {
-    position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
-}
-
-/* EFEITO QUANDO FOR A VEZ DO JOGADOR */
-.count-box.sua-vez {
-    background: rgba(255, 206, 0, 0.08);
-    border-color: rgba(255, 206, 0, 0.4);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-    transform: scale(1.02);
-}
-
-/* BADGE "SUA VEZ" */
-.badge-vez {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: #ffce00;
-    color: #000;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    padding: 4px 12px;
-    border-radius: 0 0 0 12px;
-    display: none; /* Aparece via JS adicionando classe .ativo */
-    animation: slideInRight 0.3s ease-out;
-}
-
-.count-box.sua-vez .badge-vez {
-    display: block;
-}
-
-/* ÁREA DE INFO (AVATAR + NOME + EMOJI) */
-.info-jogador {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* Container que envolve o avatar, bolinha e nome */
-.info-jogador {
-    display: flex;
-    align-items: center;
-    gap: 5px; /* Espaço entre os elementos */
-}
-
-/* A bolinha de status */
-.status-dot-placar {
-    width: 10px;
-    height: 10px;
-    background-color: #444; /* Cor cinza (offline) */
-    border-radius: 50%;
-    flex-shrink: 0; /* Impede que a bolinha amasse */
-    transition: all 0.3s ease;
-}
-
-/* Classe que será ativada via JavaScript */
-.status-dot-placar.online {
-    background-color: #00ff00 !important; /* Verde neon */
-    box-shadow: 0 0 8px #00ff00;
-    
-}
-
-/* Estilo base da bolinha (Offline) */
-.status-dot-placar {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background-color: #ff0000; /* Cinza quando estável/offline */
-    display: none; /* O JS controla a exibição */
-    transition: all 0.3s ease;
-}
-
-/* Estilo Online com Animação */
-.status-dot-placar.online {
-    background-color: #00ff00 !important; /* Verde neon */
-    display: inline-block;
-    box-shadow: 0 0 8px #00ff00;
-    /* Aplica a animação: nome, duração, repetição infinita */
-    animation: pulsarStatus 1.5s infinite ease-in-out;
-}
-
-/* Definição da Animação */
-@keyframes pulsarStatus {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2); /* Aumenta levemente */
-        box-shadow: 0 0 15px #00ff00; /* Brilho expande */
-        opacity: 0.8; /* Fica levemente transparente */
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-}
-
-/* AVATAR UPLOAD PROFISSIONAL */
-.avatar-upload {
-    width: 50px;
-    height: 50px;
-    background: #252525;
-    border: 2px dashed #444;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.2s;
-}
-
-.avatar-upload:hover {
-    border-color: #ffce00;
-    background: #333;
-}
-
-.avatar-upload img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: none; /* Aparece via JS quando tem foto */
-}
-
-.avatar-upload span {
-    font-size: 18px;
-    color: #777;
-}
-
-/* INPUT DE NOME ESTILIZADO */
-.input-nome {
-    flex: 1;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    font-size: 16px;
-    font-weight: 600;
-    padding: 5px 0;
-    outline: none;
-    transition: border-color 0.3s;
-}
-
-.input-nome:focus {
-    border-color: #ffce00;
-}
-
-/* BOTÃO DE EMOJI */
-.btn-emoji-trigger {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 8px;
-    cursor: pointer;
-    font-size: 18px;
-    transition: transform 0.2s;
-}
-
-.btn-emoji-trigger:active {
-    transform: scale(0.9);
-}
-
-/* PONTUAÇÃO (ÁREA INFERIOR) */
-.pontuacao {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 5px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.count-label {
-    font-size: 12px;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.count {
-    font-family: 'Courier New', monospace;
-    font-size: 22px;
-    font-weight: bold;
-    color: #ffce00;
-    text-shadow: 0 0 10px rgba(255, 206, 0, 0.3);
-}
-
-/* ANIMAÇÃO */
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-/* RESPONSIVIDADE PARA TELAS PEQUENAS */
-@media (max-width: 360px) {
-    .avatar-upload { width: 40px; height: 40px; }
-    .input-nome { font-size: 14px; }
-}
-
-/* AVATAR E NOMES */
-.avatar-upload {
-    width: 45px;
-    height: 45px;
-    background: #333;
-    border-radius: 50%; /* Faz o container ser um círculo */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;    /* Corta a imagem para ficar redonda */
-    cursor: pointer;
-    border: 2px solid #444;
-    position: relative;
-}
-
-.avatar-upload img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;   /* Faz a foto preencher o círculo sem esticar */
-    border-radius: 50%;  /* Garante o arredondamento da imagem */
-    display: none;       /* Começa escondida */
-}
-
-.avatar-upload span {
-    font-size: 18px;
-    color: #888;
-    position: absolute;
-}
-
-/* ESTILO ESPECÍFICO PARA AS CAPTURAS (OPCIONAL, JÁ QUE VOCÊ USA STYLE INLINE) */
-#capturas-p {
-    color: #ffffff; /* Branco para o Preto */
-}
-
-#capturas-v {
-    color: #ff5f6d; /* Vermelho para o Vermelho */
-}
-
-/* TABULEIRO */
-#tabuleiro {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    width: 85vw; /* Reduzido de 92vw para dar margem de segurança */
-    height: 85vw; /* Reduzido de 92vw */
-    max-width: 400px; /* Reduzido de 450px */
-    max-height: 400px; /* Reduzido de 450px */
-    border: 5px solid #333;
-    border-radius: 5px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    margin: 0 auto;
-}
-
-.casa {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-}
-
-.branca {
-    background: #f0d9b5;
-    }
-    
-.preta {
-    background: #b58863;
-    }
-
-/* PEÇAS */
-.peca {
-    width: 82%;
-    height: 82%;
-    border-radius: 50%;
-    position: relative;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.6);
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.peca-vermelha {
-    background: radial-gradient(circle at 30% 30%, #ff5f6d, #8b0000);
-    border: 1px solid #ffffff;
-    }
-    
-.peca-preta {
-    background: radial-gradient(circle at 30% 30%, #555, #000);
-    border: 1px solid #ffffff;
-    }
-
-.peca.selecionada {
-    /* Outline não ocupa espaço no box-model, então nada cresce */
-    outline: 2px solid #ffce00;
-    outline-offset: 2px; /* Dá um pequeno espaço entre a peça e o brilho */
-    box-shadow: 0 0 15px rgba(255, 206, 0, 0.6);
-    transform: scale(1.05); /* Um crescimento bem sutil só na peça */
-}
-
-.dama::after {
-    content: '👑';
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.4rem;
-    filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));
-}
-
-/* MODAIS E TELAS DE SOBREPOSIÇÃO */
-.modal-overlay, #tela-vitoria, .emoji-picker-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-}
-
-.emoji-picker-overlay.active {
-    display: flex !important; /* O !important garante que o display: none seja sobrescrito */
-}
-
-.modal-overlay {
-    background: rgba(0,0,0,0.95);
-}
-
-#tela-vitoria {
-    background: rgba(0,0,0,0.9);
-    display: none;
-    }
-    
-.emoji-picker-overlay {
-    background: rgba(0,0,0,0.6); 
-    display: none;
-    }
-
-.modal-card, .vitoria-card {
-    background: #222;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    width: 320px;
-    border: 2px solid #333;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-}
-
-.vitoria-card {
-    border-color: #ffce00;
-}
-
-/* BOTÕES */
-.btn-modo, .btn-lado, .btn-novo-jogo {
-    width: 100%;
-    padding: 14px;
-    margin: 8px 0;
-    border-radius: 10px;
-    border: none;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
-    text-transform: uppercase;
-}
-
-.btn-modo { background: #333; color: white; }
-.btn-modo.ativo { background: #ffce00; color: black; }
-
-.btn-v { background: #ff5f6d; color: white; }
-.btn-p { background: #444; color: white; border: 1px solid #666; }
-
-.btn-novo-jogo { background: #ffce00; color: black; margin-top: 20px; }
-.btn-novo-jogo:hover { background: #e6b800; transform: scale(1.05); }
-
-/* estilo css emoji novo*/
-
-.emoji-list {
-    background: white;
-    padding: 20px;
-    border-radius: 50px;
-    display: flex;
-    gap: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.emoji-list span {
-    font-size: 40px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.emoji-list span:hover { transform: scale(1.3); }
-
-
-.emoji-picker-overlay {
-    /* ... seus estilos atuais ... */
-    z-index: 10001; 
-}
-
-/* O corpo do Emoji que vai voar */
-.float-emoji {
-    position: fixed; /* Fixed para ignorar o scroll e focar na tela */
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 50px;
-    z-index: 99999;
-    pointer-events: none;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
-}
-
-/* Animação para o jogador que está no TOPO (Preto) */
-.animar-descer {
-    animation: viajarParaBaixo 2s ease-in-out forwards;
-}
-
-/* Animação para o jogador que está na BASE (Vermelho) */
-.animar-subir {
-    animation: viajarParaCima 2s ease-in-out forwards;
-}
-
-@keyframes viajarParaBaixo {
-    0% { top: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
-    50% { top: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
-    80% { opacity: 1; }
-    100% { top: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-}
-
-@keyframes viajarParaCima {
-    0% { bottom: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
-    50% { bottom: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
-    80% { opacity: 1; }
-    100% { bottom: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-}
-/* fim do estilo css emoji*/
-
-#tela-vitoria.ativo {
-    display: flex;
-    animation: fadeIn 0.4s ease-out forwards;
-}
-
-/* PWA */
-#pwa-install-container {
-    margin-bottom: 10px;
-}
-
-.btn-pwa {
-    background: #222;
-    color: #ffce00;
-    border: 1px solid #ffce00;
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-/* STATUS IA */
-.ia-pensando-status {
-    color: #ffce00;
-    font-size: 12px;
-    animation: pulseIA 1.5s infinite;
-}
-
-@keyframes pulseIA {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
-}
-
-.feedback-erro {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(217, 4, 41, 0.95); /* Vermelho intenso */
-    color: white;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: bold;
-    z-index: 1000;
-    white-space: nowrap;
-    animation: feedbackAparecer 2.5s forwards;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.3);
-}
-
-@keyframes feedbackAparecer {
-    0% { opacity: 0; transform: translate(-50%, -10%); }
-    15% { opacity: 1; transform: translate(-50%, -50%); }
-    85% { opacity: 1; }
-    100% { opacity: 0; transform: translate(-50%, -80%); }
-}
-
-.shake-placar {
-    animation: shake 0.4s ease-in-out;
-}
-
-@keyframes shake {
-    0%, 100% { transform: scale(1); }
-    25% { transform: scale(1.02) translateX(-4px); }
-    75% { transform: scale(1.02) translateX(4px); }
-}
-
-
- /*Lobby*/
-
-/* --- CONTAINER DO LOBBY (SALA DE ESPERA) --- */
-.lobby-container {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    width: 90%;
-    max-width: 400px;
-    margin: 10px auto;
-    padding: 10px;
-    backdrop-filter: blur(5px);
-}
-
-.lobby-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 5px;
-}
-
-.lobby-header h3 {
-    text-align:center;
-    font-size: 16px; 
-    color: #ffce00; 
-    margin: auto;
-}
-
-/* --- LISTA DE JOGADORES COM ROLAGEM --- */
-#lista-jogadores {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 200px; /* Altura máxima antes de rolar */
-    overflow-y: auto;  /* Ativa rolagem vertical */
-    padding-right: 5px; 
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: #ffce00 rgba(255, 255, 255, 0.05); /* Firefox */
-}
-
-/* Personalização da barra de rolagem (Chrome, Edge, Safari) */
-#lista-jogadores::-webkit-scrollbar {
-    width: 6px;
-}
-#lista-jogadores::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-}
-#lista-jogadores::-webkit-scrollbar-thumb {
-    background: #ffce00;
-    border-radius: 10px;
-}
-#lista-jogadores::-webkit-scrollbar-thumb:hover {
-    background: #e6b800;
-}
-
-/* --- ITENS DA LISTA --- */
-.jogador-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    margin-bottom: 5px;
-    border-radius: 8px;
-}
-
-.btn-desafiar {
-    background: #ffce00;
-    color: black;
-    border: none;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-weight: bold;
-    font-size: 11px;
-    cursor: pointer;
-    transition: transform 0.1s ease;
-}
-
-.btn-desafiar:active {
-    transform: scale(0.95);
-}
-
-/* --- BOLINHA ONLINE COM ANIMAÇÃO (PULSANDO) --- */
-.status-dot-placar {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    background-color: #555; /* Offline por padrão */
-}
-
-.status-dot-placar.online {
-    background-color: #00ff00 !important;
-    box-shadow: 0 0 8px #00ff00;
-    animation: pulsarStatus 1.5s infinite ease-in-out;
-}
-
-@keyframes pulsarStatus {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2);
-        box-shadow: 0 0 15px #00ff00;
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-}
-
-/* Fim do lobby */
+    <script src="js/script.js" type="module"></script>
+</body>
+</html>
