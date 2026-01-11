@@ -982,31 +982,48 @@ function escutarMeusConvites() {
 window.iniciarPartidaOnline = (salaId, meuLadoEscolhido) => {
     console.log("Iniciando sala: " + salaId);
     
-    // Define as variáveis globais do seu jogo
-    gameMode = 'online';
+    gameMode = 'online'; 
     idDaPartidaAtual = salaId;
-    meuLado = meuLadoEscolhido; // 'vermelho' ou 'preto'
+    meuLado = meuLadoEscolhido; 
 
-    // Inverte o tabuleiro se você for o preto
+    // --- FORÇAR FECHAMENTO DO MODAL ---
+    // 1. Fecha pelo ID principal
+    const modalPrincipal = document.getElementById('modal-cadastro');
+    if (modalPrincipal) modalPrincipal.style.display = 'none';
+
+    // 2. Remove qualquer classe "overlay" que possa estar travando a tela
+    const overlays = document.querySelectorAll('.modal-overlay');
+    overlays.forEach(overlay => overlay.style.display = 'none');
+
+    // 3. Remove classes de bloqueio do body (caso existam)
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = 'auto'; 
+    // ----------------------------------
+
+    // Ajuste visual do tabuleiro
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
         document.body.classList.remove('visao-preto');
     }
 
-    // Limpa o tabuleiro e reinicia a lógica
-    reiniciarJogo(); 
-    
-    // Escuta os movimentos dessa sala específica no Firebase
+    // Reinicia o jogo para mostrar as peças
+    if (typeof reiniciarJogo === 'function') {
+        reiniciarJogo();
+    }
+
+    // Escuta movimentos
     const movimentosRef = ref(db, `partidas/${salaId}/ultimoMovimento`);
     onValue(movimentosRef, (snapshot) => {
         const move = snapshot.val();
-        if (move && move.jogador !== meuNome) {
-            // Se o movimento veio do oponente, executa no seu tabuleiro
-            executarMovimentoOponente(move);
+        if (move && move.jogadorId !== meuNome) {
+            if (typeof executarMovimentoOponente === 'function') {
+                executarMovimentoOponente(move);
+            }
         }
     });
 };
+
 
 
 
