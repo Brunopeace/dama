@@ -7,7 +7,7 @@ import {
     onValue, 
     update,
     onDisconnect,
-    remove
+    remove   
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
 // --- CONFIGURAÇÃO FIREBASE ---
@@ -170,6 +170,13 @@ onValue(vencedorRef, (snap) => {
 });
 
 // --- VARIÁVEIS GLOBAIS ---
+
+let gameMode = 'IA';
+let meuLado = 'vermelho'; 
+let idDaPartidaAtual = null;
+let meuNome = "";
+
+
 let jogoIniciado = false;
 let partidaConfirmada = false;
 let monitoresIniciados = false;
