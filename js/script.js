@@ -485,7 +485,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
     // Pegamos o nome bruto para exibição e limpamos espaços
     const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
     
-    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização
+    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização nas chaves
     const nomeFormatado = nomeOriginal.toLowerCase();
 
     if (nomeOriginal === "") {
@@ -495,7 +495,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
-    meuNome = nomeFormatado; // Salvamos o nome formatado globalmente
+    meuNome = nomeFormatado; // Salvamos o formatado para lógica interna
     mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
@@ -505,22 +505,22 @@ window.confirmarCadastro = (ladoEscolhido) => {
         document.body.classList.remove('visao-preto');
     }
 
-    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Exibimos o original para o usuário)
+    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Visual imediato)
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
     if (modoJogo === 'online') {
-        // --- REGISTRAR PRESENÇA ONLINE (USANDO NOME FORMATADO) ---
-        // A chave no banco será sempre minúscula agora
+        // --- REGISTRAR PRESENÇA ONLINE ---
+        // A chave no banco será sempre minúscula para facilitar a busca do oponente
         const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
         set(minhaPresencaRef, { online: true, nome: nomeOriginal });
 
-        // 4. REFERÊNCIAS E SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
+        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
+        // ✅ CORREÇÃO CRÍTICA: Salvamos como 'vermelho' ou 'preto' por extenso 
+        // para que o iniciarMonitoramentoOnline consiga ler corretamente.
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
-        // No Firebase da partida, usamos 'v' ou 'p' conforme seu monitoramento anterior
-        const chaveLado = (ladoEscolhido === 'vermelho') ? 'v' : 'p';
-        const playerNameRef = ref(db, `partida_unica/nomes/${chaveLado}`);
+        const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
 
         set(playerStatusRef, true);
@@ -531,7 +531,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
             pkg.onDisconnect(playerPhotoRef).remove();
-            pkg.onDisconnect(minhaPresencaRef).remove(); // Remove da lista online ao fechar
+            pkg.onDisconnect(minhaPresencaRef).remove();
         });
 
         onValue(gameRef, (snap) => {
@@ -564,6 +564,25 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -619,6 +638,21 @@ function iniciarMonitoramentoFotos() {
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 
@@ -746,6 +780,34 @@ function iniciarMonitoramentoOnline() {
         console.log(snap.val() === true ? "🟢 Servidor Conectado" : "🟡 Conexão Oscilando");
     });
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
