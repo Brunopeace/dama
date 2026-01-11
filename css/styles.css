@@ -1059,3 +1059,124 @@ body.visao-preto .centro {
     25% { transform: scale(1.02) translateX(-4px); }
     75% { transform: scale(1.02) translateX(4px); }
 }
+
+
+ /*Lobby*/
+
+/* --- CONTAINER DO LOBBY (SALA DE ESPERA) --- */
+.lobby-container {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    margin: 10px auto;
+    padding: 10px;
+    backdrop-filter: blur(5px);
+}
+
+.lobby-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+
+.lobby-header h3 {
+    text-align:center;
+    font-size: 16px; 
+    color: #ffce00; 
+    margin: auto;
+}
+
+/* --- LISTA DE JOGADORES COM ROLAGEM --- */
+#lista-jogadores {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 200px; /* Altura máxima antes de rolar */
+    overflow-y: auto;  /* Ativa rolagem vertical */
+    padding-right: 5px; 
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: #ffce00 rgba(255, 255, 255, 0.05); /* Firefox */
+}
+
+/* Personalização da barra de rolagem (Chrome, Edge, Safari) */
+#lista-jogadores::-webkit-scrollbar {
+    width: 6px;
+}
+#lista-jogadores::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+#lista-jogadores::-webkit-scrollbar-thumb {
+    background: #ffce00;
+    border-radius: 10px;
+}
+#lista-jogadores::-webkit-scrollbar-thumb:hover {
+    background: #e6b800;
+}
+
+/* --- ITENS DA LISTA --- */
+.jogador-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    margin-bottom: 5px;
+    border-radius: 8px;
+}
+
+.btn-desafiar {
+    background: #ffce00;
+    color: black;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 11px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.btn-desafiar:active {
+    transform: scale(0.95);
+}
+
+/* --- BOLINHA ONLINE COM ANIMAÇÃO (PULSANDO) --- */
+.status-dot-placar {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    background-color: #555; /* Offline por padrão */
+}
+
+.status-dot-placar.online {
+    background-color: #00ff00 !important;
+    box-shadow: 0 0 8px #00ff00;
+    animation: pulsarStatus 1.5s infinite ease-in-out;
+}
+
+@keyframes pulsarStatus {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 5px #00ff00;
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        box-shadow: 0 0 15px #00ff00;
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 5px #00ff00;
+        opacity: 1;
+    }
+}
+
+/* Fim do lobby */
