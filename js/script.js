@@ -1,10 +1,12 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { 
-    getDatabase, 
+    getDatabase,
+    get, 
     ref, 
     set, 
     onValue, 
     update,
+    onDisconnect,
     remove
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
@@ -750,7 +752,98 @@ window.registrarPresenca = (nome) => {
 
 
 
-// --- LÓGICA DO LOBBY COM BOLINHA PULSANTE ---
+
+// 🔵 FUNÇÃO: FAZER LOGIN
+window.fazerLogin = async () => {
+    const nomeInput = document.getElementById('modal-input-nome');
+    if (!nomeInput) return;
+    
+    const nomeBase = nomeInput.value.trim();
+    const nomeChave = nomeBase.toLowerCase();
+
+    if (nomeChave === "") {
+        alert("Por favor, digite seu nome de usuário.");
+        return;
+    }
+
+    // Busca no nó de usuários cadastrados
+    const userRef = ref(db, `usuarios_cadastrados/${nomeChave}`);
+    
+    try {
+        const snapshot = await get(userRef);
+
+        if (snapshot.exists()) {
+            const dados = snapshot.val();
+            meuNome = nomeChave; // Define a variável global do jogo
+            
+            // --- REGISTRO DE PRESENÇA ONLINE IMEDIATO ---
+            const presencaRef = ref(db, `usuarios_online/${meuNome}`);
+            await set(presencaRef, {
+                nome: dados.nomeOriginal, // Nome bonito (ex: "Carlos")
+                status: "disponivel",
+                timestamp: Date.now()
+            });
+
+            // Configura para remover automaticamente quando fechar a aba ou perder conexão
+            onDisconnect(presencaRef).remove();
+
+            // --- ATUALIZAÇÃO DA INTERFACE ---
+            
+            // 1. Esconde a área de login
+            document.getElementById('area-login').style.display = 'none';
+            
+            // 2. MOSTRA O FLUXO POSTERIOR (Modos de Jogo, Lado e Lobby)
+            const fluxoPos = document.getElementById('pos-login-fluxo');
+            if (fluxoPos) fluxoPos.style.display = 'block';
+
+            const painelLobby = document.getElementById('painel-lobby');
+            if (painelLobby) painelLobby.style.display = 'block';
+            
+            // 3. Atualiza os textos de boas-vindas
+            document.getElementById('modal-titulo').innerText = `Olá, ${dados.nomeOriginal}!`;
+            document.getElementById('modal-subtitulo').innerText = "Você está online. Escolha o modo de jogo.";
+            
+        } else {
+            alert("Usuário não cadastrado! Clique em 'Cadastre-se' abaixo para criar sua conta.");
+        }
+    } catch (error) {
+        console.error("Erro ao fazer login:", error);
+        alert("Erro na conexão com o banco de dados.");
+    }
+};
+
+// 🟢 FUNÇÃO: CRIAR CONTA (Salva permanentemente no banco)
+window.criarNovaConta = async () => {
+    const nomeInput = document.getElementById('reg-input-nome');
+    const nomeOriginal = nomeInput.value.trim();
+    const nomeChave = nomeOriginal.toLowerCase();
+
+    if (nomeChave.length < 3) {
+        alert("O nome deve ter pelo menos 3 caracteres.");
+        return;
+    }
+
+    const userRef = ref(db, `usuarios_cadastrados/${nomeChave}`);
+    
+    try {
+        const snapshot = await get(userRef);
+        if (snapshot.exists()) {
+            alert("Este usuário já existe. Tente outro nome.");
+        } else {
+            await set(userRef, { 
+                nomeOriginal: nomeOriginal, 
+                dataCriacao: Date.now() 
+            });
+            alert("Conta criada com sucesso! Agora você já pode fazer login.");
+            window.alternarModal(false); // Volta para a tela de login
+        }
+    } catch (error) {
+        console.error("Erro ao cadastrar:", error);
+        alert("Erro ao salvar cadastro.");
+    }
+};
+
+// --- LÓGICA DO LOBBY COM ATUALIZAÇÃO EM TEMPO REAL ---
 
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
@@ -760,33 +853,30 @@ onValue(listaJogadoresRef, (snapshot) => {
         atualizarBolinhasStatus(jogadoresOnline);
     }
 
-    // 2. Atualiza a lista lateral/menu
+    // 2. Atualiza a lista de jogadores no Lobby
     const listaUl = document.getElementById('lista-jogadores');
     
     if (listaUl) {
         listaUl.innerHTML = ""; 
         
-        // Convertemos o nome do usuário local para minúsculo para comparar
         const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
 
         Object.keys(jogadoresOnline).forEach(chave => {
-            // Se for eu mesmo, não mostro na lista
+            // Se for eu mesmo, não mostro na lista para convidar
             if (chave === meuNomeRef) return; 
 
             const dados = jogadoresOnline[chave];
-            // Usa o nome salvo ou a chave caso o nome falhe
             const nomeParaMostrar = dados.nome || chave;
 
             const li = document.createElement('li');
             li.className = 'jogador-item';
             
-            // Note o uso da classe 'status-dot-placar online' para ativar o efeito piscante
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span class="status-dot-placar online"></span>
                     <span style="color: white; font-weight: 500; font-size: 14px;">${nomeParaMostrar}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${nomeParaMostrar}')">
+                <button class="btn-desafiar" onclick="desafiarJogador('${chave}', '${nomeParaMostrar}')">
                     CONVIDAR
                 </button>
             `;
@@ -796,8 +886,8 @@ onValue(listaJogadoresRef, (snapshot) => {
         // Se não houver ninguém online além de você
         if (listaUl.innerHTML === "") {
             listaUl.innerHTML = `
-                <div style="text-align:center; padding: 10px; color: #888;">
-                    <p style="font-size: 13px;">Nenhum oponente online</p>
+                <div style="text-align:center; padding: 15px; color: #888;">
+                    <p style="font-size: 13px;">Nenhum oponente online no momento</p>
                 </div>
             `;
         }
@@ -805,11 +895,32 @@ onValue(listaJogadoresRef, (snapshot) => {
 });
 
 // Função para quando clicar no botão CONVIDAR
-window.desafiarJogador = (nomeOponente) => {
-    console.log("Convidando: " + nomeOponente);
-    // Por enquanto, mostra o alerta. Próximo passo seria criar a sala no Firebase.
+window.desafiarJogador = (idOponente, nomeOponente) => {
+    console.log("Convidando ID: " + idOponente);
+    // Próximo passo: Criar nó 'convites' no Firebase para o oponente receber
     alert("Convite enviado para " + nomeOponente + "!\nAguardando confirmação...");
 };
+
+// Alterna entre tela de Login e Cadastro no Modal
+window.alternarModal = (queroCadastrar) => {
+    document.getElementById('area-login').style.display = queroCadastrar ? 'none' : 'block';
+    document.getElementById('area-cadastro').style.display = queroCadastrar ? 'block' : 'none';
+    
+    // Ajusta o título do modal dependendo da tela
+    document.getElementById('modal-titulo').innerText = queroCadastrar ? "Criar Conta" : "Damas Online";
+    document.getElementById('modal-subtitulo').innerText = queroCadastrar ? "Escolha um nome de usuário único" : "Acesse sua conta para jogar";
+};
+
+
+
+
+
+
+
+
+
+
+
 
 
 
