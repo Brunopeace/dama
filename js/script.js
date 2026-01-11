@@ -39,26 +39,6 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Variável para comparar o estado anterior (coloque fora da função onValue)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
@@ -68,7 +48,7 @@ onValue(playersRef, (snap) => {
     const btnP = document.getElementById('btn-escolher-preto');
     
     // 1. NOTIFICAÇÃO DE ENTRADA (Saber quem acabou de entrar)
-    // Se o Vermelho não estava no banco e agora está, e não sou eu
+
     if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
         if (meuLado !== 'vermelho') notificarEntrada('Vermelho');
     }
@@ -104,7 +84,6 @@ onValue(playersRef, (snap) => {
     const totalJogadores = Object.keys(jogadoresAtuais).length;
     
     // Atualiza os pontinhos verde/cinza no placar
- //   atualizarIndicadoresStatus(jogadoresAtuais);
 
     if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
     if (!jogoIniciado) {
@@ -123,7 +102,7 @@ onValue(playersRef, (snap) => {
 function notificarEntrada(lado) {
     const alerta = document.createElement('div');
     alerta.className = 'feedback-entrada';
-    alerta.innerHTML = `<span>🎮</span> Jogador <b>${lado}</b> entrou na sala!`;
+    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nome}</b> entrou na sala!`;
     document.body.appendChild(alerta);
 
     // Remove automaticamente após 3 segundos
@@ -132,36 +111,6 @@ function notificarEntrada(lado) {
         setTimeout(() => alerta.remove(), 1000);
     }, 3000);
 }
-
-// Função auxiliar para atualizar as bolinhas de status
-/* function atualizarIndicadoresStatus(jogadores) {
-    const statusV = document.getElementById('ponto-status-v'); // Crie esses IDs no HTML
-    const statusP = document.getElementById('ponto-status-p');
-    const textoV = document.getElementById('texto-status-v');
-    const textoP = document.getElementById('texto-status-p');
-
-    // Status Vermelho
-    if (jogadores.vermelho) {
-        if (statusV) statusV.classList.add('online');
-        if (textoV) textoV.innerText = "Online";
-    } else {
-        if (statusV) statusV.classList.remove('online');
-        if (textoV) textoV.innerText = "Aguardando...";
-    }
-
-    // Status Preto
-    if (jogadores.preto) {
-        if (statusP) statusP.classList.add('online');
-        if (textoP) textoP.innerText = "Online";
-    } else {
-        if (statusP) statusP.classList.remove('online');
-        if (textoP) textoP.innerText = "Aguardando...";
-    }
-}
-
-
-*/
-
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -379,9 +328,6 @@ function exibirEmojiNaTela(emoji, lado) {
     el.className = 'float-emoji';
     el.innerText = emoji;
 
-    // Aplicamos a animação baseada no lado de quem enviou
-    // Se for o jogador de baixo (vermelho), o emoji SOBE para o centro
-    // Se for o jogador de cima (preto), o emoji DESCE para o centro
     if (lado === 'vermelho') {
         el.classList.add('animar-subir');
     } else {
@@ -390,7 +336,6 @@ function exibirEmojiNaTela(emoji, lado) {
 
     document.body.appendChild(el);
 
-    // Remove do HTML após a animação acabar
     setTimeout(() => {
         el.remove();
     }, 2000);
@@ -458,27 +403,6 @@ if (modo === 'online') {
         sideSelection.style.animation = 'fadeIn 0.5s ease';
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
@@ -565,25 +489,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
     const botoesAntigos = document.querySelectorAll('.btn-sair');
@@ -605,7 +510,7 @@ function mostrarMeuBotaoSair() {
     }
 }
 
-// --- ✅ MONITORAMENTO
+// --- ✅ MONITORAMENTO de foto
 
 function iniciarMonitoramentoFotos() {
     if (modoJogo !== 'online') return;
@@ -639,21 +544,6 @@ function iniciarMonitoramentoFotos() {
     });
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // --- ✅ MONITORAMENTO ONLINE COMPLETO (NOMES, TABULEIRO, FOTOS E ESTABILIDADE) ---
 
 function iniciarMonitoramentoOnline() {
@@ -667,7 +557,6 @@ function iniciarMonitoramentoOnline() {
 
         // ✅ GATILHO DE LIBERAÇÃO CRÍTICO
         if (nomesAtuais.vermelho && nomesAtuais.preto) {
-            console.log("🎮 Partida Pronta! Ambos os jogadores estão online.");
             jogoIniciado = true;      
             partidaConfirmada = true; 
         }
@@ -686,7 +575,7 @@ function iniciarMonitoramentoOnline() {
         });
 
         // 🔥 NOVO GATILHO: ATUALIZAÇÃO DAS BOLINHAS DE STATUS
-        // Quando os nomes da partida carregam, forçamos a busca na lista global de presença
+        
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
             const presenceRef = pkg.ref(db, 'usuarios_online');
             pkg.get(presenceRef).then((snapshotOnline) => {
@@ -780,35 +669,6 @@ function iniciarMonitoramentoOnline() {
         console.log(snap.val() === true ? "🟢 Servidor Conectado" : "🟡 Conexão Oscilando");
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
@@ -922,8 +782,7 @@ window.validarCliqueAvatar = (ladoClicado) => {
             console.warn("Você não pode alterar a foto do seu oponente!");
         }
     } else {
-        // No modo IA (Offline), você pode alterar qualquer um dos dois se desejar
-        // Ou trave apenas para o seu lado se preferir:
+        
         if (ladoClicado === meuLado) {
             document.getElementById(`input-${ladoClicado}`).click();
         }
