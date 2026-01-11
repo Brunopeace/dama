@@ -928,24 +928,40 @@ function escutarMeusConvites() {
         const dados = snapshot.val();
         
         if (dados && dados.status === 'pendente') {
-            // Se o convite for muito antigo (mais de 1 min), ignore
+            // Se o convite tiver mais de 1 minuto, apaga
             if (Date.now() - dados.timestamp > 60000) {
                 remove(meuConviteRef);
                 return;
             }
 
-            // Mostra o convite para o usuário (Pode usar um confirm ou um modal próprio)
-            const aceitou = confirm(`O jogador ${dados.remetenteNome} está te desafiando para uma partida online! Aceitar?`);
+            const aceitou = confirm(`${dados.remetenteNome} te desafiou! Aceitar partida agora?`);
 
             if (aceitou) {
-                console.log("Desafio aceito!");
-                // Aqui você iniciaria a lógica de criar a sala de jogo
-                // Por enquanto, apenas deletamos o convite e avisamos
-                remove(meuConviteRef); 
-                alert("Iniciando partida contra " + dados.remetenteNome);
-                // chamar iniciarPartidaOnline(dados.remetenteId);
+                // 1. Criar ID único para a sala de jogo
+                // Combinamos os nomes em ordem alfabética para os dois caírem na mesma sala
+                const salaId = [meuNome, dados.remetenteId].sort().join("_vs_");
+                
+                // 2. Criar a sala no Firebase com o estado inicial do jogo
+                const salaRef = ref(db, `partidas/${salaId}`);
+                
+                set(salaRef, {
+                    jogador1: dados.remetenteId,
+                    jogador2: meuNome,
+                    turno: 'vermelho', // Vermelho sempre começa
+                    timestamp: Date.now(),
+                    status: 'em_andamento'
+                });
+
+                // 3. Atualizar o convite para 'aceito' (o remetente vai ler isso e entrar na sala também)
+                update(meuConviteRef, { status: 'aceito', salaId: salaId });
+
+                // 4. Iniciar o jogo localmente
+                iniciarPartidaOnline(salaId, 'preto'); // Quem aceita geralmente fica com as pretas (base)
+                
+                // 5. Fecha o modal de menu
+                document.getElementById('modal-cadastro').style.display = 'none';
+
             } else {
-                // Se recusar, removemos o convite do banco
                 remove(meuConviteRef);
             }
         }
@@ -955,25 +971,120 @@ function escutarMeusConvites() {
 
 
 
+window.iniciarPartidaOnline = (salaId, meuLadoEscolhido) => {
+    console.log("Iniciando sala: " + salaId);
+    
+    // Define as variáveis globais do seu jogo
+    gameMode = 'online';
+    idDaPartidaAtual = salaId;
+    meuLado = meuLadoEscolhido; // 'vermelho' ou 'preto'
+
+    // Inverte o tabuleiro se você for o preto
+    if (meuLado === 'preto') {
+        document.body.classList.add('visao-preto');
+    } else {
+        document.body.classList.remove('visao-preto');
+    }
+
+    // Limpa o tabuleiro e reinicia a lógica
+    reiniciarJogo(); 
+    
+    // Escuta os movimentos dessa sala específica no Firebase
+    const movimentosRef = ref(db, `partidas/${salaId}/ultimoMovimento`);
+    onValue(movimentosRef, (snapshot) => {
+        const move = snapshot.val();
+        if (move && move.jogador !== meuNome) {
+            // Se o movimento veio do oponente, executa no seu tabuleiro
+            executarMovimentoOponente(move);
+        }
+    });
+};
+
+
+
+
+
+
+
+
+
+
 
 // Função para quando clicar no botão CONVIDAR
 window.desafiarJogador = async (idOponente, nomeOponente) => {
-    if (!meuNome) return alert("Erro: Você não está logado adequadamente.");
+    if (!meuNome) return alert("Erro: Faça login primeiro.");
 
     const conviteRef = ref(db, `convites/${idOponente}`);
     
     try {
+        // 1. Envia o convite para o banco de dados
         await set(conviteRef, {
             remetenteId: meuNome,
             remetenteNome: (typeof nomeUsuarioLogado !== 'undefined' ? nomeUsuarioLogado : meuNome),
             timestamp: Date.now(),
             status: 'pendente'
         });
-        alert("Convite enviado para " + nomeOponente + "!");
+
+        alert("Convite enviado! Aguardando " + nomeOponente + "...");
+
+        // 2. Fica ouvindo o convite para saber quando o oponente aceitar
+        onValue(conviteRef, (snapshot) => {
+            const statusConvite = snapshot.val();
+            
+            if (statusConvite && statusConvite.status === 'aceito') {
+                console.log("O oponente aceitou o desafio!");
+
+                // Define as cores: Quem convida geralmente começa (Vermelho)
+                // O oponente que aceitou será o Preto
+                const salaId = statusConvite.salaId;
+
+                // 3. Inicia o jogo localmente para quem enviou o convite
+                iniciarPartidaOnline(salaId, 'vermelho');
+
+                // 4. Fecha o modal de lobby/cadastro
+                const modal = document.getElementById('modal-cadastro');
+                if (modal) modal.style.display = 'none';
+
+                // 5. Limpa o convite do banco para não ficar repetindo
+                remove(conviteRef);
+            }
+            
+            // Opcional: Se o convite for recusado (ex: deletado pelo oponente)
+            if (!statusConvite && snapshot.exists() === false) {
+                // Aqui você poderia tratar uma recusa
+            }
+        });
+
     } catch (error) {
         console.error("Erro ao enviar convite:", error);
+        alert("Não foi possível enviar o convite.");
     }
 };
+
+// --- FUNÇÃO AUXILIAR PARA INICIAR A LOGICA DE JOGO ---
+window.iniciarPartidaOnline = (salaId, corEscolhida) => {
+    console.log(`Partida iniciada na sala: ${salaId} como: ${corEscolhida}`);
+    
+    gameMode = 'online';
+    idDaPartidaAtual = salaId;
+    meuLado = corEscolhida;
+
+    // Lógica visual: Se for preto, gira o tabuleiro (se você tiver essa classe no CSS)
+    if (meuLado === 'preto') {
+        document.getElementById('tabuleiro').classList.add('visao-preto');
+    } else {
+        document.getElementById('tabuleiro').classList.remove('visao-preto');
+    }
+
+    // Reinicia o tabuleiro para o estado inicial de jogo
+    if (typeof reiniciarJogo === 'function') {
+        reiniciarJogo();
+    }
+    
+    // Agora o seu jogo deve usar o idDaPartidaAtual para enviar movimentos ao Firebase
+};
+
+
 
 
 
