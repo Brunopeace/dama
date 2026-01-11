@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DAMA ONLINE</title>
+    <title>DAMA</title>
     <link rel="icon" href="img/icon-512.png">
     <link rel="stylesheet" type="text/css" href="css/styles.css">
     <link rel="manifest" href="manifest.json">
+    
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
 </head>
 <body>
      
@@ -18,129 +20,119 @@
     </div>
     
     <div id="modal-cadastro" class="modal-overlay">
-        <div class="modal-card professional-ui">
-            <div class="modal-header">
-                <div class="logo-circle">
-                    <img src="img/icon-192.png" alt="Logo" class="logo-img">
+    <div class="modal-card professional-ui">
+        <div class="modal-header">
+            <div class="logo-circle">
+                <img src="img/icon-192.png" alt="Logo" class="logo-img">
+            </div>
+            <h2>Bem-vindo</h2>
+        </div>
+
+        <div class="modal-body">
+      
+       <div id="painel-lobby" class="lobby-container">
+            <div class="lobby-header">
+                <span class="status-dot online"></span>
+                        <h3>Jogadores Online</h3>
+            </div>
+                        <ul id="lista-jogadores"></ul>
+       </div>
+                        
+            <div class="input-group">
+                <label for="modal-input-nome">Como quer ser chamado?</label>
+                <div class="input-with-icon">
+                    <span class="icon">👤</span>
+                    <input type="text" id="modal-input-nome" placeholder="Digite seu apelido..." maxlength="12">
                 </div>
-                <h2 id="modal-titulo">Damas Online</h2>
-                <p id="modal-subtitulo">Acesse sua conta para jogar</p>
+                <span id="nome-error" class="error-msg"></span>
             </div>
 
-            <div class="modal-body">
-                <div id="area-login">
-                    <div class="input-group">
-                        <label for="modal-input-nome">Nome de Usuário</label>
-                        <div class="input-with-icon">
-                            <span class="icon">👤</span>
-                            <input type="text" id="modal-input-nome" placeholder="Seu apelido cadastrado..." maxlength="12">
-                        </div>
-                    </div>
-                    <button class="btn-confirmar" onclick="fazerLogin()">ENTRAR NO JOGO</button>
-                    <p class="trocar-tela">Não tem conta? <a href="#" onclick="alternarModal(true)">Cadastre-se aqui</a></p>
-                </div>
-
-                <div id="area-cadastro" style="display: none;">
-                    <div class="input-group">
-                        <label for="reg-input-nome">Criar Novo Usuário</label>
-                        <div class="input-with-icon">
-                            <span class="icon">📝</span>
-                            <input type="text" id="reg-input-nome" placeholder="Escolha um nome único..." maxlength="12">
-                        </div>
-                    </div>
-                    <button class="btn-confirmar" style="background: #28a745;" onclick="criarNovaConta()">CRIAR MINHA CONTA</button>
-                    <p class="trocar-tela">Já tem conta? <a href="#" onclick="alternarModal(false)">Fazer Login</a></p>
-                </div>
-
-                <div id="pos-login-fluxo" style="display: none;">
-                    <div class="step-label">Selecione o modo de jogo</div>
-                    <div class="modo-grid">
-                        <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
-                            <span class="card-icon">🤖</span>
-                            <div class="card-info">
-                                <span class="card-title">Treinamento</span>
-                                <span class="card-desc">Contra a Máquina</span>
-                            </div>
-                        </div>
-                        <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
-                            <span class="card-icon">🌐</span>
-                            <div class="card-info">
-                                <span class="card-title">Competitivo</span>
-                                <span class="card-desc">Partida Online</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="side-selection" class="side-container" style="display: none;">
-                        <div class="step-label">Escolha sua cor</div>
-                        <div class="side-grid">
-                            <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
-                                <span class="dot"></span> Vermelho
-                            </button>
-                            <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
-                                <span class="dot"></span> Preto
-                            </button>
-                        </div>
+            <div class="step-label">Selecione o modo de jogo</div>
+            <div class="modo-grid">
+                <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
+                    <span class="card-icon">🤖</span>
+                    <div class="card-info">
+                        <span class="card-title">Treinamento</span>
+                        <span class="card-desc">Contra a Máquina</span>
                     </div>
                 </div>
-
-                <div id="painel-lobby" class="lobby-container" style=" display: none; margin-top: 20px;">
-                    <div class="lobby-header">
-                        <span class="status-dot-placar online"></span>
-                        <h3>Jogadores Online</h3>
+                <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
+                    <span class="card-icon">🌐</span>
+                    <div class="card-info">
+                        <span class="card-title">Competitivo</span>
+                        <span class="card-desc">Partida Online</span>
                     </div>
-                    <ul id="lista-jogadores"></ul>
+                </div>
+            </div>
+
+            <div id="side-selection" class="side-container" style="display: none;">
+                <div class="step-label">Escolha sua cor</div>
+                <div class="side-grid">
+                    <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
+                        <span class="dot"></span> Vermelho
+                    </button>
+                    <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
+                        <span class="dot"></span> Preto
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <div id="game-layout">
-        <div class="placar-container" id="container-topo">
-            <div id="box-preto" class="count-box">
-                <span class="badge-vez">Sua Vez</span>
-                <div class="info-jogador">
-                    <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
-                        <span id="icon-p">📷</span>
-                        <img id="img-preto">
-                        <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
-                    </div>
-                    <span id="status-p" class="status-dot-placar"></span>
-                    <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" readonly>               
-                    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
-                </div>
-                <div class="pontuacao">
-                    <span class="count-label">Preto </span>
-                    <span id="capturas-p" class="count">0</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="centro">
-            <div id="msg-erro"></div>
-            <div id="tabuleiro"></div>
-        </div>
-
-        <div class="placar-container" id="container-base">
-            <div id="box-vermelho" class="count-box">
-                <span class="badge-vez badge-vermelha">Sua Vez</span>
-                <div class="info-jogador">
-                    <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
-                        <span id="icon-v">📷</span>
-                        <img id="img-vermelho">
-                        <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
-                    </div>
-                    <span id="status-v" class="status-dot-placar"></span>
-                    <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" readonly>
-                    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>            
-                </div>
-                <div class="pontuacao">
-                    <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
-                    <span id="capturas-v" class="count" style="color: #ff5f6d;">0</span>
-                </div>
+    <div class="placar-container" id="container-topo">
+        <div id="box-preto" class="count-box">
+            
+            <span class="badge-vez">Sua Vez</span>
+            
+            <div class="info-jogador">
+                <div class="avatar-upload" onclick="validarCliqueAvatar('preto')">
+            <span id="icon-p">📷</span>
+        <img id="img-preto">
+        <input type="file" id="input-preto" hidden accept="image/*" onchange="carregarFoto(event, 'img-preto', 'icon-p')">
+    </div>
+    <span id="status-p" class="status-dot-placar"></span>
+    
+    <input type="text" id="input-nome-p" class="input-nome" placeholder="Jogador Preto" onchange="alterarNome('p')">               
+    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('preto')">😊</button>
+</div>
+            
+            <div class="pontuacao">
+                <span class="count-label">Preto </span>
+                <span id="capturas-p" class="count">0</span>
             </div>
         </div>
     </div>
+
+    <div class="centro">
+        <div id="msg-erro"></div>
+        <div id="tabuleiro"></div>
+    </div>
+
+    <div class="placar-container" id="container-base">
+        <div id="box-vermelho" class="count-box">
+            
+            <span class="badge-vez badge-vermelha">Sua Vez</span>
+            <div class="info-jogador">
+                <div class="avatar-upload" onclick="validarCliqueAvatar('vermelho')">
+        <span id="icon-v">📷</span>
+        <img id="img-vermelho">
+        <input type="file" id="input-vermelho" hidden accept="image/*" onchange="carregarFoto(event, 'img-vermelho', 'icon-v')">
+    </div>
+    <span id="status-v" class="status-dot-placar"></span>
+    
+    <input type="text" id="input-nome-v" class="input-nome" placeholder="Jogador Vermelho" onchange="alterarNome('v')">
+    <button class="btn-emoji-trigger" onclick="abrirModalEmoji('vermelho')">😊</button>            
+</div>
+                        
+            <div class="pontuacao">
+                <span class="count-label" style="color: #ff5f6d;">Vermelho </span>
+                <span id="capturas-v" class="count" style="color: #ff5f6d;">0</span>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div id="modal-emoji-selecao" class="emoji-picker-overlay">
         <div class="emoji-list">
@@ -158,24 +150,33 @@
             <h2 id="vencedor-texto">VITÓRIA!</h2>
             <p class="vitoria-subtexto">Partida encerrada com sucesso.</p>
             <button class="btn-novo-jogo" onclick="reiniciar()">JOGAR NOVAMENTE ?</button>
-            <button class="btn-voltar-menu" onclick="encerrarPartida()">SAIR</button>
+<button class="btn-voltar-menu" onclick="encerrarPartida()">
+    SAIR
+</button>
+
         </div>
     </div>
     
     <div id="tela-derrota" class="modal-perdeu-overlay" style="display: none;">
-        <div class="card-perdeu-nativo">
-            <div class="status-badge">PARTIDA ENCERRADA</div>
-            <div class="emoji-main">😭</div>
-            <h2 class="titulo-perdeu">VOCÊ PERDEU</h2>
-            <p class="texto-perdeu">Não foi dessa vez!<br>Seu adversário foi melhor.</p>
-            <div class="acoes-modal">
-                <button class="btn-reiniciar-primario" onclick="reiniciar()">
-                    <span class="icon">🔄</span> JOGAR NOVAMENTE ?
-                </button>
-                <button class="btn-voltar-menu" onclick="encerrarPartida()">SAIR</button>
-            </div>
+    <div class="card-perdeu-nativo">
+        <div class="status-badge">PARTIDA ENCERRADA</div>
+        
+        <div class="emoji-main">😭</div>
+        
+        <h2 class="titulo-perdeu">VOCÊ PERDEU</h2>
+        <p class="texto-perdeu">Não foi dessa vez!<br>Seu adversário foi melhor.</p>
+        
+        <div class="acoes-modal">
+            <button class="btn-reiniciar-primario" onclick="reiniciar()">
+                <span class="icon">🔄</span> JOGAR NOVAMENTE ?
+            </button>
+<button class="btn-voltar-menu" onclick="encerrarPartida()">
+    SAIR
+</button>
+
         </div>
     </div>
+</div>
     
     <script src="js/script.js" type="module"></script>
 </body>
