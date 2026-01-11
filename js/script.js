@@ -24,7 +24,6 @@ const firebaseConfig = {
 // Inicialização
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-let meuNome = "";
 // 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
