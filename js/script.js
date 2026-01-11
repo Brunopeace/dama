@@ -980,42 +980,44 @@ function escutarMeusConvites() {
 
 
 window.iniciarPartidaOnline = (salaId, meuLadoEscolhido) => {
-    console.log("Iniciando sala: " + salaId);
+    console.log("Iniciando sala: " + salaId + " como " + meuLadoEscolhido);
     
+    // 1. Configura as variáveis globais (Certifique-se que foram declaradas no topo)
     gameMode = 'online'; 
     idDaPartidaAtual = salaId;
     meuLado = meuLadoEscolhido; 
 
-    // --- FORÇAR FECHAMENTO DO MODAL ---
-    // 1. Fecha pelo ID principal
-    const modalPrincipal = document.getElementById('modal-cadastro');
-    if (modalPrincipal) modalPrincipal.style.display = 'none';
+    // 2. FECHAR O MODAL E OVERLAYS
+    const modal = document.getElementById('modal-cadastro');
+    if (modal) modal.style.display = 'none';
+    
+    const overlay = document.querySelector('.modal-overlay');
+    if (overlay) overlay.style.display = 'none';
 
-    // 2. Remove qualquer classe "overlay" que possa estar travando a tela
-    const overlays = document.querySelectorAll('.modal-overlay');
-    overlays.forEach(overlay => overlay.style.display = 'none');
-
-    // 3. Remove classes de bloqueio do body (caso existam)
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = 'auto'; 
-    // ----------------------------------
-
-    // Ajuste visual do tabuleiro
+    // 3. AJUSTE VISUAL (Gira o tabuleiro se for preto)
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
         document.body.classList.remove('visao-preto');
     }
 
-    // Reinicia o jogo para mostrar as peças
-    if (typeof reiniciarJogo === 'function') {
+    // 4. DESENHAR O TABULEIRO (Aqui estava o erro!)
+    // Verificamos se a função se chama 'reiniciar' ou 'reiniciarJogo'
+    if (typeof window.reiniciar === 'function') {
+        window.reiniciar(); 
+        console.log("Tabuleiro desenhado via window.reiniciar()");
+    } else if (typeof reiniciarJogo === 'function') {
         reiniciarJogo();
+        console.log("Tabuleiro desenhado via reiniciarJogo()");
+    } else {
+        console.error("ERRO: Nenhuma função de reiniciar foi encontrada!");
     }
 
-    // Escuta movimentos
+    // 5. ESCUTAR MOVIMENTOS DO OPONENTE
     const movimentosRef = ref(db, `partidas/${salaId}/ultimoMovimento`);
     onValue(movimentosRef, (snapshot) => {
         const move = snapshot.val();
+        // Só executa se o movimento existir e não for meu
         if (move && move.jogadorId !== meuNome) {
             if (typeof executarMovimentoOponente === 'function') {
                 executarMovimentoOponente(move);
@@ -1023,6 +1025,7 @@ window.iniciarPartidaOnline = (salaId, meuLadoEscolhido) => {
         }
     });
 };
+
 
 
 
