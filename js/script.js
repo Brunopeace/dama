@@ -786,6 +786,7 @@ window.fazerLogin = async () => {
 
             // Configura para remover automaticamente quando fechar a aba ou perder conexão
             onDisconnect(presencaRef).remove();
+            escutarMeusConvites();
 
             // --- ATUALIZAÇÃO DA INTERFACE ---
             
@@ -811,6 +812,18 @@ window.fazerLogin = async () => {
         alert("Erro na conexão com o banco de dados.");
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 🟢 FUNÇÃO: CRIAR CONTA (Salva permanentemente no banco)
 window.criarNovaConta = async () => {
@@ -894,12 +907,83 @@ onValue(listaJogadoresRef, (snapshot) => {
     }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+function escutarMeusConvites() {
+    if (!meuNome) return;
+
+    const meuConviteRef = ref(db, `convites/${meuNome}`);
+
+    onValue(meuConviteRef, (snapshot) => {
+        const dados = snapshot.val();
+        
+        if (dados && dados.status === 'pendente') {
+            // Se o convite for muito antigo (mais de 1 min), ignore
+            if (Date.now() - dados.timestamp > 60000) {
+                remove(meuConviteRef);
+                return;
+            }
+
+            // Mostra o convite para o usuário (Pode usar um confirm ou um modal próprio)
+            const aceitou = confirm(`O jogador ${dados.remetenteNome} está te desafiando para uma partida online! Aceitar?`);
+
+            if (aceitou) {
+                console.log("Desafio aceito!");
+                // Aqui você iniciaria a lógica de criar a sala de jogo
+                // Por enquanto, apenas deletamos o convite e avisamos
+                remove(meuConviteRef); 
+                alert("Iniciando partida contra " + dados.remetenteNome);
+                // chamar iniciarPartidaOnline(dados.remetenteId);
+            } else {
+                // Se recusar, removemos o convite do banco
+                remove(meuConviteRef);
+            }
+        }
+    });
+}
+
+
+
+
+
 // Função para quando clicar no botão CONVIDAR
-window.desafiarJogador = (idOponente, nomeOponente) => {
-    console.log("Convidando ID: " + idOponente);
-    // Próximo passo: Criar nó 'convites' no Firebase para o oponente receber
-    alert("Convite enviado para " + nomeOponente + "!\nAguardando confirmação...");
+window.desafiarJogador = async (idOponente, nomeOponente) => {
+    if (!meuNome) return alert("Erro: Você não está logado adequadamente.");
+
+    const conviteRef = ref(db, `convites/${idOponente}`);
+    
+    try {
+        await set(conviteRef, {
+            remetenteId: meuNome,
+            remetenteNome: (typeof nomeUsuarioLogado !== 'undefined' ? nomeUsuarioLogado : meuNome),
+            timestamp: Date.now(),
+            status: 'pendente'
+        });
+        alert("Convite enviado para " + nomeOponente + "!");
+    } catch (error) {
+        console.error("Erro ao enviar convite:", error);
+    }
 };
+
+
+
+
+
+
+
+
+
+
 
 // Alterna entre tela de Login e Cadastro no Modal
 window.alternarModal = (queroCadastrar) => {
