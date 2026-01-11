@@ -928,45 +928,48 @@ function escutarMeusConvites() {
         const dados = snapshot.val();
         
         if (dados && dados.status === 'pendente') {
-            // Se o convite tiver mais de 1 minuto, apaga
-            if (Date.now() - dados.timestamp > 60000) {
-                remove(meuConviteRef);
-                return;
-            }
-
-            const aceitou = confirm(`${dados.remetenteNome} te desafiou! Aceitar partida agora?`);
+            const aceitou = confirm(`${dados.remetenteNome} te desafiou! Aceitar?`);
 
             if (aceitou) {
-                // 1. Criar ID único para a sala de jogo
-                // Combinamos os nomes em ordem alfabética para os dois caírem na mesma sala
+                // Cria o ID da sala único
                 const salaId = [meuNome, dados.remetenteId].sort().join("_vs_");
                 
-                // 2. Criar a sala no Firebase com o estado inicial do jogo
+                // 1. Cria a sala de jogo no banco
                 const salaRef = ref(db, `partidas/${salaId}`);
-                
                 set(salaRef, {
-                    jogador1: dados.remetenteId,
-                    jogador2: meuNome,
-                    turno: 'vermelho', // Vermelho sempre começa
-                    timestamp: Date.now(),
-                    status: 'em_andamento'
+                    jogador1: dados.remetenteId, // Vermelho
+                    jogador2: meuNome,           // Preto
+                    status: 'em_andamento',
+                    timestamp: Date.now()
                 });
 
-                // 3. Atualizar o convite para 'aceito' (o remetente vai ler isso e entrar na sala também)
-                update(meuConviteRef, { status: 'aceito', salaId: salaId });
+                // 2. ATUALIZA O CONVITE: Isso avisa o Jogador A para entrar no jogo
+                update(meuConviteRef, { 
+                    status: 'aceito', 
+                    salaId: salaId 
+                });
 
-                // 4. Iniciar o jogo localmente
-                iniciarPartidaOnline(salaId, 'preto'); // Quem aceita geralmente fica com as pretas (base)
-                
-                // 5. Fecha o modal de menu
-                document.getElementById('modal-cadastro').style.display = 'none';
+                // 3. Inicia o jogo como PRETO (quem aceita)
+                iniciarPartidaOnline(salaId, 'preto');
 
             } else {
+                // Se recusar, remove o convite para o Jogador A saber que foi negado
                 remove(meuConviteRef);
             }
         }
     });
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1017,7 +1020,7 @@ window.desafiarJogador = async (idOponente, nomeOponente) => {
     const conviteRef = ref(db, `convites/${idOponente}`);
     
     try {
-        // 1. Envia o convite para o banco de dados
+        // 1. Envia o convite para o oponente
         await set(conviteRef, {
             remetenteId: meuNome,
             remetenteNome: (typeof nomeUsuarioLogado !== 'undefined' ? nomeUsuarioLogado : meuNome),
@@ -1027,31 +1030,21 @@ window.desafiarJogador = async (idOponente, nomeOponente) => {
 
         alert("Convite enviado! Aguardando " + nomeOponente + "...");
 
-        // 2. Fica ouvindo o convite para saber quando o oponente aceitar
+        // 2. ESCUTA ATIVA: Fica vigiando este convite específico
+        // Quando o oponente aceitar, ele vai mudar o status para 'aceito' e colocar o salaId
         onValue(conviteRef, (snapshot) => {
-            const statusConvite = snapshot.val();
+            const dadosConvite = snapshot.val();
             
-            if (statusConvite && statusConvite.status === 'aceito') {
-                console.log("O oponente aceitou o desafio!");
+            if (dadosConvite && dadosConvite.status === 'aceito') {
+                console.log("O oponente aceitou! Iniciando partida...");
 
-                // Define as cores: Quem convida geralmente começa (Vermelho)
-                // O oponente que aceitou será o Preto
-                const salaId = statusConvite.salaId;
+                const salaIdSugerida = dadosConvite.salaId;
 
-                // 3. Inicia o jogo localmente para quem enviou o convite
-                iniciarPartidaOnline(salaId, 'vermelho');
+                // 3. Inicia o jogo como VERMELHO (quem convida)
+                iniciarPartidaOnline(salaIdSugerida, 'vermelho');
 
-                // 4. Fecha o modal de lobby/cadastro
-                const modal = document.getElementById('modal-cadastro');
-                if (modal) modal.style.display = 'none';
-
-                // 5. Limpa o convite do banco para não ficar repetindo
-                remove(conviteRef);
-            }
-            
-            // Opcional: Se o convite for recusado (ex: deletado pelo oponente)
-            if (!statusConvite && snapshot.exists() === false) {
-                // Aqui você poderia tratar uma recusa
+                // 4. Limpa o convite e para de ouvir para não reiniciar o jogo duplicado
+                remove(conviteRef); 
             }
         });
 
@@ -1060,6 +1053,26 @@ window.desafiarJogador = async (idOponente, nomeOponente) => {
         alert("Não foi possível enviar o convite.");
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- FUNÇÃO AUXILIAR PARA INICIAR A LOGICA DE JOGO ---
 window.iniciarPartidaOnline = (salaId, corEscolhida) => {
