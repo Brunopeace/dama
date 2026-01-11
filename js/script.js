@@ -170,8 +170,7 @@ onValue(vencedorRef, (snap) => {
 
 // --- VARIÁVEIS GLOBAIS ---
 
-let gameMode = 'IA';
-let meuLado = 'vermelho'; 
+let gameMode = 'IA'; 
 let idDaPartidaAtual = null;
 let meuNome = "";
 
