@@ -1,13 +1,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { 
-    getDatabase,
-    get, 
+    getDatabase, 
     ref, 
     set, 
     onValue, 
     update,
-    onDisconnect,
-    remove   
+    remove
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
 // --- CONFIGURAÇÃO FIREBASE ---
@@ -24,6 +22,7 @@ const firebaseConfig = {
 // Inicialização
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+let meuNome = "";
 // 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
@@ -169,12 +168,6 @@ onValue(vencedorRef, (snap) => {
 });
 
 // --- VARIÁVEIS GLOBAIS ---
-
-let gameMode = 'IA'; 
-let idDaPartidaAtual = null;
-let meuNome = "";
-
-
 let jogoIniciado = false;
 let partidaConfirmada = false;
 let monitoresIniciados = false;
@@ -737,447 +730,32 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 🔵 FUNÇÃO: FAZER LOGIN
-window.fazerLogin = async () => {
-    const nomeInput = document.getElementById('modal-input-nome');
-    if (!nomeInput) return;
-    
-    const nomeBase = nomeInput.value.trim();
-    const nomeChave = nomeBase.toLowerCase();
-
-    if (nomeChave === "") {
-        alert("Por favor, digite seu nome de usuário.");
-        return;
-    }
-
-    // Busca no nó de usuários cadastrados
-    const userRef = ref(db, `usuarios_cadastrados/${nomeChave}`);
-    
-    try {
-        const snapshot = await get(userRef);
-
-        if (snapshot.exists()) {
-            const dados = snapshot.val();
-            meuNome = nomeChave; // Define a variável global do jogo
-            
-            // --- REGISTRO DE PRESENÇA ONLINE IMEDIATO ---
-            const presencaRef = ref(db, `usuarios_online/${meuNome}`);
-            await set(presencaRef, {
-                nome: dados.nomeOriginal, // Nome bonito (ex: "Carlos")
-                status: "disponivel",
-                timestamp: Date.now()
-            });
-
-            // Configura para remover automaticamente quando fechar a aba ou perder conexão
-            onDisconnect(presencaRef).remove();
-            escutarMeusConvites();
-
-            // --- ATUALIZAÇÃO DA INTERFACE ---
-            
-            // 1. Esconde a área de login
-            document.getElementById('area-login').style.display = 'none';
-            
-            // 2. MOSTRA O FLUXO POSTERIOR (Modos de Jogo, Lado e Lobby)
-            const fluxoPos = document.getElementById('pos-login-fluxo');
-            if (fluxoPos) fluxoPos.style.display = 'block';
-
-            const painelLobby = document.getElementById('painel-lobby');
-            if (painelLobby) painelLobby.style.display = 'block';
-            
-            // 3. Atualiza os textos de boas-vindas
-            document.getElementById('modal-titulo').innerText = `Olá, ${dados.nomeOriginal}!`;
-            document.getElementById('modal-subtitulo').innerText = "Você está online. Escolha o modo de jogo.";
-            
-        } else {
-            alert("Usuário não cadastrado! Clique em 'Cadastre-se' abaixo para criar sua conta.");
-        }
-    } catch (error) {
-        console.error("Erro ao fazer login:", error);
-        alert("Erro na conexão com o banco de dados.");
-    }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 🟢 FUNÇÃO: CRIAR CONTA (Salva permanentemente no banco)
-window.criarNovaConta = async () => {
-    const nomeInput = document.getElementById('reg-input-nome');
-    const nomeOriginal = nomeInput.value.trim();
-    const nomeChave = nomeOriginal.toLowerCase();
-
-    if (nomeChave.length < 3) {
-        alert("O nome deve ter pelo menos 3 caracteres.");
-        return;
-    }
-
-    const userRef = ref(db, `usuarios_cadastrados/${nomeChave}`);
-    
-    try {
-        const snapshot = await get(userRef);
-        if (snapshot.exists()) {
-            alert("Este usuário já existe. Tente outro nome.");
-        } else {
-            await set(userRef, { 
-                nomeOriginal: nomeOriginal, 
-                dataCriacao: Date.now() 
-            });
-            alert("Conta criada com sucesso! Agora você já pode fazer login.");
-            window.alternarModal(false); // Volta para a tela de login
-        }
-    } catch (error) {
-        console.error("Erro ao cadastrar:", error);
-        alert("Erro ao salvar cadastro.");
-    }
-};
-
-// --- LÓGICA DO LOBBY COM ATUALIZAÇÃO EM TEMPO REAL ---
-
+// 2. Ouvinte principal do Firebase
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
-    
-    // 1. Atualiza as bolinhas no placar (se já estiver em jogo)
-    if (typeof atualizarBolinhasStatus === 'function') {
-        atualizarBolinhasStatus(jogadoresOnline);
-    }
+    atualizarBolinhasStatus(jogadoresOnline);
 
-    // 2. Atualiza a lista de jogadores no Lobby
+    // Atualiza lista lateral
     const listaUl = document.getElementById('lista-jogadores');
-    
     if (listaUl) {
         listaUl.innerHTML = ""; 
-        
         const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
-
-        Object.keys(jogadoresOnline).forEach(chave => {
-            // Se for eu mesmo, não mostro na lista para convidar
-            if (chave === meuNomeRef) return; 
-
+        for (let chave in jogadoresOnline) {
+            if (chave === meuNomeRef) continue; 
             const dados = jogadoresOnline[chave];
-            const nomeParaMostrar = dados.nome || chave;
-
             const li = document.createElement('li');
             li.className = 'jogador-item';
-            
             li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span class="status-dot-placar online"></span>
-                    <span style="color: white; font-weight: 500; font-size: 14px;">${nomeParaMostrar}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-dot online"></span>
+                    <span>${dados.nomeExibicao || chave}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${chave}', '${nomeParaMostrar}')">
-                    CONVIDAR
-                </button>
+                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
             `;
             listaUl.appendChild(li);
-        });
-
-        // Se não houver ninguém online além de você
-        if (listaUl.innerHTML === "") {
-            listaUl.innerHTML = `
-                <div style="text-align:center; padding: 15px; color: #888;">
-                    <p style="font-size: 13px;">Nenhum oponente online no momento</p>
-                </div>
-            `;
         }
     }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-function escutarMeusConvites() {
-    if (!meuNome) return;
-
-    const meuConviteRef = ref(db, `convites/${meuNome}`);
-
-    onValue(meuConviteRef, (snapshot) => {
-        const dados = snapshot.val();
-        
-        if (dados && dados.status === 'pendente') {
-            const aceitou = confirm(`${dados.remetenteNome} te desafiou! Aceitar?`);
-
-            if (aceitou) {
-                // Cria o ID da sala único
-                const salaId = [meuNome, dados.remetenteId].sort().join("_vs_");
-                
-                // 1. Cria a sala de jogo no banco
-                const salaRef = ref(db, `partidas/${salaId}`);
-                set(salaRef, {
-                    jogador1: dados.remetenteId, // Vermelho
-                    jogador2: meuNome,           // Preto
-                    status: 'em_andamento',
-                    timestamp: Date.now()
-                });
-
-                // 2. ATUALIZA O CONVITE: Isso avisa o Jogador A para entrar no jogo
-                update(meuConviteRef, { 
-                    status: 'aceito', 
-                    salaId: salaId 
-                });
-
-                // 3. Inicia o jogo como PRETO (quem aceita)
-                iniciarPartidaOnline(salaId, 'preto');
-
-            } else {
-                // Se recusar, remove o convite para o Jogador A saber que foi negado
-                remove(meuConviteRef);
-            }
-        }
-    });
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-window.iniciarPartidaOnline = (salaId, meuLadoEscolhido) => {
-    console.log("Iniciando sala: " + salaId + " como " + meuLadoEscolhido);
-    
-    // 1. Configura as variáveis globais (Certifique-se que foram declaradas no topo)
-    gameMode = 'online'; 
-    idDaPartidaAtual = salaId;
-    meuLado = meuLadoEscolhido; 
-
-    // 2. FECHAR O MODAL E OVERLAYS
-    const modal = document.getElementById('modal-cadastro');
-    if (modal) modal.style.display = 'none';
-    
-    const overlay = document.querySelector('.modal-overlay');
-    if (overlay) overlay.style.display = 'none';
-
-    // 3. AJUSTE VISUAL (Gira o tabuleiro se for preto)
-    if (meuLado === 'preto') {
-        document.body.classList.add('visao-preto');
-    } else {
-        document.body.classList.remove('visao-preto');
-    }
-
-    // 4. DESENHAR O TABULEIRO (Aqui estava o erro!)
-    // Verificamos se a função se chama 'reiniciar' ou 'reiniciarJogo'
-    if (typeof window.reiniciar === 'function') {
-        window.reiniciar(); 
-        console.log("Tabuleiro desenhado via window.reiniciar()");
-    } else if (typeof reiniciarJogo === 'function') {
-        reiniciarJogo();
-        console.log("Tabuleiro desenhado via reiniciarJogo()");
-    } else {
-        console.error("ERRO: Nenhuma função de reiniciar foi encontrada!");
-    }
-
-    // 5. ESCUTAR MOVIMENTOS DO OPONENTE
-    const movimentosRef = ref(db, `partidas/${salaId}/ultimoMovimento`);
-    onValue(movimentosRef, (snapshot) => {
-        const move = snapshot.val();
-        // Só executa se o movimento existir e não for meu
-        if (move && move.jogadorId !== meuNome) {
-            if (typeof executarMovimentoOponente === 'function') {
-                executarMovimentoOponente(move);
-            }
-        }
-    });
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Função para quando clicar no botão CONVIDAR
-window.desafiarJogador = async (idOponente, nomeOponente) => {
-    if (!meuNome) return alert("Erro: Faça login primeiro.");
-
-    const conviteRef = ref(db, `convites/${idOponente}`);
-    
-    try {
-        // 1. Envia o convite para o oponente
-        await set(conviteRef, {
-            remetenteId: meuNome,
-            remetenteNome: (typeof nomeUsuarioLogado !== 'undefined' ? nomeUsuarioLogado : meuNome),
-            timestamp: Date.now(),
-            status: 'pendente'
-        });
-
-        alert("Convite enviado! Aguardando " + nomeOponente + "...");
-
-        // 2. ESCUTA ATIVA: Fica vigiando este convite específico
-        // Quando o oponente aceitar, ele vai mudar o status para 'aceito' e colocar o salaId
-        onValue(conviteRef, (snapshot) => {
-            const dadosConvite = snapshot.val();
-            
-            if (dadosConvite && dadosConvite.status === 'aceito') {
-                console.log("O oponente aceitou! Iniciando partida...");
-
-                const salaIdSugerida = dadosConvite.salaId;
-
-                // 3. Inicia o jogo como VERMELHO (quem convida)
-                iniciarPartidaOnline(salaIdSugerida, 'vermelho');
-
-                // 4. Limpa o convite e para de ouvir para não reiniciar o jogo duplicado
-                remove(conviteRef); 
-            }
-        });
-
-    } catch (error) {
-        console.error("Erro ao enviar convite:", error);
-        alert("Não foi possível enviar o convite.");
-    }
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// --- FUNÇÃO AUXILIAR PARA INICIAR A LOGICA DE JOGO ---
-window.iniciarPartidaOnline = (salaId, corEscolhida) => {
-    console.log(`Partida iniciada na sala: ${salaId} como: ${corEscolhida}`);
-    
-    gameMode = 'online';
-    idDaPartidaAtual = salaId;
-    meuLado = corEscolhida;
-
-    // Lógica visual: Se for preto, gira o tabuleiro (se você tiver essa classe no CSS)
-    if (meuLado === 'preto') {
-        document.getElementById('tabuleiro').classList.add('visao-preto');
-    } else {
-        document.getElementById('tabuleiro').classList.remove('visao-preto');
-    }
-
-    // Reinicia o tabuleiro para o estado inicial de jogo
-    if (typeof reiniciarJogo === 'function') {
-        reiniciarJogo();
-    }
-    
-    // Agora o seu jogo deve usar o idDaPartidaAtual para enviar movimentos ao Firebase
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Alterna entre tela de Login e Cadastro no Modal
-window.alternarModal = (queroCadastrar) => {
-    document.getElementById('area-login').style.display = queroCadastrar ? 'none' : 'block';
-    document.getElementById('area-cadastro').style.display = queroCadastrar ? 'block' : 'none';
-    
-    // Ajusta o título do modal dependendo da tela
-    document.getElementById('modal-titulo').innerText = queroCadastrar ? "Criar Conta" : "Damas Online";
-    document.getElementById('modal-subtitulo').innerText = queroCadastrar ? "Escolha um nome de usuário único" : "Acesse sua conta para jogar";
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
