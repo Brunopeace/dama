@@ -1,6 +1,4 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-// 1. Registrar presença (Garante compatibilidade com teclado de celular)
-import { onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 import { 
     getDatabase, 
     ref, 
@@ -41,7 +39,7 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-
+// Variável para comparar o estado anterior (coloque fora da função onValue)
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
     
@@ -49,30 +47,15 @@ onValue(playersRef, (snap) => {
     const btnV = document.getElementById('btn-escolher-vermelho');
     const btnP = document.getElementById('btn-escolher-preto');
     
-    // 1. BUSCA DE NOMES E NOTIFICAÇÃO DE ENTRADA
-    // Consultamos o nó de nomes para saber QUEM entrou de fato
-    onValue(ref(db, 'partida_unica/nomes'), (nomeSnap) => {
-        const nomesRealTime = nomeSnap.val() || {};
+    // 1. NOTIFICAÇÃO DE ENTRADA (Saber quem acabou de entrar)
 
-        // Notificação para o lado Vermelho
-        if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
-            if (meuLado !== 'vermelho') {
-                const nomeParaExibir = nomesRealTime.vermelho || "Vermelho";
-                notificarEntrada(nomeParaExibir);
-            }
-        }
-
-        // Notificação para o lado Preto
-        if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
-            if (meuLado !== 'preto') {
-                const nomeParaExibir = nomesRealTime.preto || "Preto";
-                notificarEntrada(nomeParaExibir);
-            }
-        }
-
-        // Importante: Atualiza o histórico após verificar as notificações
-        jogadoresAntigos = { ...jogadoresAtuais };
-    }, { onlyOnce: true });
+    if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
+        if (meuLado !== 'vermelho') notificarEntrada('Vermelho');
+    }
+    // Se o Preto não estava no banco e agora está, e não sou eu
+    if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
+        if (meuLado !== 'preto') notificarEntrada('Preto');
+    }
 
     // 2. GERENCIAMENTO DOS BOTÕES DE ESCOLHA
     if (btnV) {
@@ -82,7 +65,7 @@ onValue(playersRef, (snap) => {
         } else {
             btnV.disabled = false;
             btnV.style.display = 'flex';
-            btnV.innerHTML = '<span class="dot"></span> Vermelho Disponível';
+            btnV.innerText = "Vermelho Disponível";
         }
     }
 
@@ -93,57 +76,34 @@ onValue(playersRef, (snap) => {
         } else {
             btnP.disabled = false;
             btnP.style.display = 'flex';
-            btnP.innerHTML = '<span class="dot"></span> Preto Disponível';
+            btnP.innerText = "Preto Disponível";
         }
     }
 
     // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
-    // Atualiza as bolinhas de status no placar
-    const statusV = document.getElementById('status-v');
-    const statusP = document.getElementById('status-p');
+    const totalJogadores = Object.keys(jogadoresAtuais).length;
     
-    if (statusV) statusV.className = jogadoresAtuais.vermelho ? 'status-dot-placar online' : 'status-dot-placar';
-    if (statusP) statusP.className = jogadoresAtuais.preto ? 'status-dot-placar online' : 'status-dot-placar';
+    // Atualiza os pontinhos verde/cinza no placar
 
-    // Verifica se ambos estão presentes para iniciar a partida
     if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
-        if (!jogoIniciado) {
-            console.log("Partida Pronta! Ambos os jogadores estão online.");
-            // Você pode adicionar um alerta visual aqui: "Partida Iniciada!"
-        }
-        jogoIniciado = true;
-    } else {
-        jogoIniciado = false;
+    if (!jogoIniciado) {
+        console.log("Partida Pronta! Ambos os jogadores estão online.");
     }
+    jogoIniciado = true;
+} else {
+    jogoIniciado = false;
+}
+   
+   // Guarda o estado atual para a próxima comparação
+    jogadoresAntigos = { ...jogadoresAtuais };
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
 // ✅ Função para exibir o alerta visual de entrada
-// ✅ Função para exibir o alerta visual de entrada (Corrigida)
-function notificarEntrada(nomeJogador) {
-    // Se por algum motivo o nome vier vazio, usamos um padrão para não dar erro
-    const nomeExibir = nomeJogador || "Convidado";
-
+function notificarEntrada(lado) {
     const alerta = document.createElement('div');
     alerta.className = 'feedback-entrada';
-    
-    // CORREÇÃO: Usamos a variável 'nomeExibir' que definimos acima
-    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nomeExibir}</b> entrou na sala!`;
+    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nome}</b> entrou na sala!`;
     document.body.appendChild(alerta);
-
-    // Efeito suave de transição (opcional, precisa de CSS)
-    alerta.style.transition = "opacity 1s ease";
 
     // Remove automaticamente após 3 segundos
     setTimeout(() => {
@@ -151,14 +111,6 @@ function notificarEntrada(nomeJogador) {
         setTimeout(() => alerta.remove(), 1000);
     }, 3000);
 }
-
-
-
-
-
-
-
-
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -215,15 +167,12 @@ onValue(vencedorRef, (snap) => {
     }
 });
 
-
-
-
 // --- VARIÁVEIS GLOBAIS ---
-let jogadoresAntigos = { vermelho: false, preto: false };
 let jogoIniciado = false;
 let partidaConfirmada = false;
 let monitoresIniciados = false;
 let temporizadoresSaida = {};
+let jogadoresAntigos = {};
 let nomesAnteriores = {};
 let modoJogo = 'online'; 
 let meuLado = new URLSearchParams(window.location.search).get('lado'); 
@@ -275,165 +224,6 @@ if ('serviceWorker' in navigator) {
         });
     });
 }
-
-
-
-
-
-
-//👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
-
-
-// Verifica se existe um usuário salvo no navegador
-window.addEventListener('DOMContentLoaded', () => {
-    const salvo = localStorage.getItem('dama_user');
-    if (salvo) {
-        const dados = JSON.parse(salvo);
-        document.getElementById('modal-input-nome').value = dados.nome;
-        document.getElementById('check-lembrar').checked = true;
-        meuNome = dados.nome.toLowerCase();
-        
-        // Se o usuário foi lembrado, podemos pular parte do cadastro ou preencher automático
-        console.log("Bem-vindo de volta, " + dados.nome);
-    }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 👀👀👀👀👀👀👀👀👀👀
-function iniciarMonitorAmigos(meuNomeFormatado) {
-    const meusAmigosRef = ref(db, `perfis/${meuNomeFormatado}/amigos`);
-    const onlineRef = ref(db, `usuarios_online`);
-
-    onValue(meusAmigosRef, (snapshotAmigos) => {
-        const amigos = snapshotAmigos.val() || {};
-        
-        onValue(onlineRef, (snapshotOnline) => {
-            const online = snapshotOnline.val() || {};
-            const listaUl = document.getElementById('lista-amigos');
-            if (!listaUl) return;
-            
-            listaUl.innerHTML = "";
-            
-            Object.keys(amigos).forEach(nomeAmigo => {
-                const estaOnline = online[nomeAmigo];
-                const li = document.createElement('li');
-                li.className = 'jogador-item';
-                li.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="status-dot ${estaOnline ? 'online' : 'offline'}"></span>
-                        <span style="color: ${estaOnline ? '#fff' : '#888'}">${nomeAmigo}</span>
-                    </div>
-                    ${estaOnline ? `<button class="btn-desafiar" onclick="desafiarJogador('${nomeAmigo}')">DESAFIAR</button>` : '<small>Offline</small>'}
-                `;
-                listaUl.appendChild(li);
-            });
-        });
-    });
-}
-
-
-//👀👀👀👀👀👀👀👀👀👀
-window.adicionarAmigo = (nomeAmigo) => {
-    if (!meuNome) {
-        alert("Você precisa estar logado para adicionar amigos!");
-        return;
-    }
-
-    const nomeAmigoFormatado = nomeAmigo.toLowerCase();
-    
-    if (nomeAmigoFormatado === meuNome) {
-        alert("Você não pode adicionar a si mesmo!");
-        return;
-    }
-
-    // Referência no Firebase: perfis/seu-nome/amigos/nome-do-amigo
-    const amigosRef = ref(db, `perfis/${meuNome}/amigos/${nomeAmigoFormatado}`);
-    
-    set(amigosRef, {
-        nomeExibicao: nomeAmigo,
-        adicionadoEm: Date.now()
-    }).then(() => {
-        alert(`${nomeAmigo} foi adicionado à sua lista de amigos!`);
-    }).catch((error) => {
-        console.error("Erro ao adicionar amigo:", error);
-    });
-};
-
-// ✅ Torna a função acessível para o clique do botão no HTML
-window.desafiarJogador = function(nomeDoOponente) {
-    if (!nomeDoOponente) return;
-    
-    // 1. Feedback visual imediato
-    console.log("Desafiando: " + nomeDoOponente);
-    alert("Enviando convite para " + nomeDoOponente + "...");
-
-    // 2. Lógica para o Firebase (Criar um nó de convite)
-    // Aqui você define que quer jogar com essa pessoa
-    const conviteRef = ref(db, `convites/${nomeDoOponente.toLowerCase()}`);
-    
-    set(conviteRef, {
-        de: meuNome,
-        tipo: 'desafio',
-        ts: Date.now(),
-        status: 'pendente'
-    }).then(() => {
-        console.log("Convite registrado no banco!");
-    }).catch(err => {
-        console.error("Erro ao desafiar:", err);
-    });
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ---✅ SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
 window.carregarFoto = function(event, imgId, iconId) {
@@ -518,6 +308,52 @@ window.alterarNome = function(lado) {
     }
 };
 
+// --- SISTEMA DE EMOJIS ---
+window.abrirModalEmoji = function(ladoDoBotao) {
+    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
+    document.getElementById('modal-emoji-selecao').classList.add('active');
+};
+
+document.addEventListener('mousedown', (event) => {
+    const modal = document.getElementById('modal-emoji-selecao');
+    if (modal?.classList.contains('active') && event.target === modal) {
+        modal.classList.remove('active');
+    }
+});
+
+// ✅ emojis
+
+function exibirEmojiNaTela(emoji, lado) {
+    const el = document.createElement('div');
+    el.className = 'float-emoji';
+    el.innerText = emoji;
+
+    if (lado === 'vermelho') {
+        el.classList.add('animar-subir');
+    } else {
+        el.classList.add('animar-descer');
+    }
+
+    document.body.appendChild(el);
+
+    setTimeout(() => {
+        el.remove();
+    }, 2000);
+}
+
+// --- OUVINTE ÚNICO DE EMOJIS ---
+onValue(emojiRef, (snap) => {
+    const data = snap.val();
+    
+    if (data && data.ts && (Date.now() - data.ts < 3000)) {
+        
+        exibirEmojiNaTela(data.texto, data.lado);
+        
+        if (typeof dispararEfeitoEmoji === 'function') {
+            dispararEfeitoEmoji(data.texto, data.lado);
+        }
+    }
+});
 
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
@@ -568,30 +404,12 @@ if (modo === 'online') {
     }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
-
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
-    const checkboxLembrar = document.getElementById('check-lembrar');
-    
+    // Pegamos o nome bruto para exibição e limpamos espaços
     const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
+    
+    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização nas chaves
     const nomeFormatado = nomeOriginal.toLowerCase();
 
     if (nomeOriginal === "") {
@@ -599,50 +417,32 @@ window.confirmarCadastro = (ladoEscolhido) => {
         return;
     }
 
-    // 1. LÓGICA DE PERSISTÊNCIA (LEMBRAR-ME)
-    if (checkboxLembrar && checkboxLembrar.checked) {
-        localStorage.setItem('dama_user_remember', JSON.stringify({
-            nome: nomeOriginal
-        }));
-    } else {
-        localStorage.removeItem('dama_user_remember');
-    }
-
-    // 2. ATUALIZAÇÃO DAS VARIÁVEIS GLOBAIS
+    // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
-    meuNome = nomeOriginal; // Usamos o original para exibição
+    meuNome = nomeFormatado; // Salvamos o formatado para lógica interna
     mostrarMeuBotaoSair(); 
 
-    // 3. INVERSÃO VISUAL DA INTERFACE
+    // 2. INVERSÃO VISUAL DA INTERFACE
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
         document.body.classList.remove('visao-preto');
     }
 
-    // 4. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR
+    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Visual imediato)
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
     if (modoJogo === 'online') {
-        // --- CHAMADA DO REGISTRO DE PRESENÇA (Lobby Global) ---
-        if (typeof window.registrarPresenca === 'function') {
-            window.registrarPresenca(nomeOriginal);
-        }
+        // --- REGISTRAR PRESENÇA ONLINE ---
+        // A chave no banco será sempre minúscula para facilitar a busca do oponente
+        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
+        set(minhaPresencaRef, { online: true, nome: nomeOriginal });
 
-        // PERFIL PERMANENTE E MONITOR DE AMIGOS
-        const perfilRef = ref(db, `perfis/${nomeFormatado}`);
-        update(perfilRef, {
-            nomeExibicao: nomeOriginal,
-            ultimaVezOnline: Date.now()
-        });
-
-        if (typeof iniciarMonitorAmigos === 'function') {
-            iniciarMonitorAmigos(nomeFormatado);
-        }
-
-        // 5. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA ESPECÍFICA)
+        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
+        // ✅ CORREÇÃO CRÍTICA: Salvamos como 'vermelho' ou 'preto' por extenso 
+        // para que o iniciarMonitoramentoOnline consiga ler corretamente.
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
@@ -650,19 +450,12 @@ window.confirmarCadastro = (ladoEscolhido) => {
         set(playerStatusRef, true);
         set(playerNameRef, nomeOriginal);
         
-        // 6. CONFIGURAÇÃO DE DESCONEXÃO AUTOMÁTICA
-        // Importamos as funções necessárias para limpar o banco se o usuário sair
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-            const { onDisconnect } = pkg;
-            
-            // Remove o status da partida
-            onDisconnect(playerStatusRef).remove();
-            onDisconnect(playerNameRef).remove();
-            onDisconnect(playerPhotoRef).remove();
-            
-            // Também remove da lista de usuários online (Lobby)
-            const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
-            onDisconnect(minhaPresencaRef).remove();
+            pkg.onDisconnect(playerStatusRef).remove();
+            pkg.onDisconnect(playerNameRef).remove();
+            pkg.onDisconnect(playerPhotoRef).remove();
+            pkg.onDisconnect(minhaPresencaRef).remove();
         });
 
         onValue(gameRef, (snap) => {
@@ -670,14 +463,14 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }, { onlyOnce: true });
 
     } else {
-        // MODO IA (OFFLINE)
+        // 6. MODO IA (OFFLINE)
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL DO MODAL
+    // 7. FINALIZAÇÃO VISUAL
     const modal = document.getElementById('modal-cadastro');
     if (modal) modal.style.display = 'none';
     
@@ -686,7 +479,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     desenhar();
 
-    // Início da jogada se for IA e for o turno dela
     if (modoJogo === 'ia') {
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
         if (turno === idTurnoIA) {
@@ -696,27 +488,6 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -940,102 +711,51 @@ const atualizarBolinhasStatus = (jogadoresOnline) => {
     }
 };
 
-
-
+// 1. Registrar presença (Garante compatibilidade com teclado de celular)
 window.registrarPresenca = (nome) => {
-    if (!nome || nome.length < 2) return;
+    if (!nome) return;
     
+    // Normaliza o nome antes de salvar no banco
     const nomeNormalizado = nome.trim().toLowerCase();
     const minhaPresencaRef = ref(db, `usuarios_online/${nomeNormalizado}`);
     
-    // 1. Marca como online
     set(minhaPresencaRef, { 
         online: true, 
-        nomeExibicao: nome.trim(),
-        timestamp: serverTimestamp() // Recomendado usar o tempo do servidor
+        nomeExibicao: nome.trim(), // Nome original com maiúsculas para a lista lateral
+        timestamp: Date.now() 
     });
     
-    // 2. Garante que saia da lista ao fechar o app/navegador
-    onDisconnect(minhaPresencaRef).remove();
-    
-    console.log(`✅ Presença registrada para: ${nome}`);
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// troca de abas
-
-window.switchTab = (event, tabId) => {
-    // 1. Previne o comportamento padrão do clique
-    if (event) event.preventDefault();
-
-    // 2. Seleciona todos os conteúdos de aba e remove a visibilidade
-    const allTabs = document.querySelectorAll('.tab-content');
-    allTabs.forEach(tab => {
-        tab.classList.remove('active');
-        tab.style.display = 'none'; // Reforço via JS
+    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
+        pkg.onDisconnect(minhaPresencaRef).remove();
     });
-
-    // 3. Remove o destaque de todos os botões
-    const allButtons = document.querySelectorAll('.tab-btn');
-    allButtons.forEach(btn => btn.classList.remove('active'));
-
-    // 4. Mostra a aba clicada
-    const selectedTab = document.getElementById(tabId);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-        selectedTab.style.display = 'block'; // Mostra a div
-    }
-
-    // 5. Destaca o botão clicado
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
 };
 
+// 2. Ouvinte principal do Firebase
+onValue(listaJogadoresRef, (snapshot) => {
+    const jogadoresOnline = snapshot.val() || {};
+    atualizarBolinhasStatus(jogadoresOnline);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    // Atualiza lista lateral
+    const listaUl = document.getElementById('lista-jogadores');
+    if (listaUl) {
+        listaUl.innerHTML = ""; 
+        const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
+        for (let chave in jogadoresOnline) {
+            if (chave === meuNomeRef) continue; 
+            const dados = jogadoresOnline[chave];
+            const li = document.createElement('li');
+            li.className = 'jogador-item';
+            li.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="status-dot online"></span>
+                    <span>${dados.nomeExibicao || chave}</span>
+                </div>
+                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
+            `;
+            listaUl.appendChild(li);
+        }
+    }
+});
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -1226,110 +946,61 @@ function atualizarDestaqueTurno() {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//✅
-
-// --- SISTEMA DE EMOJIS ---
-window.abrirModalEmoji = function(ladoDoBotao) {
-    // No online, só abre se for o SEU avatar. No offline, abre sempre.
-    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
-    
-    const modal = document.getElementById('modal-emoji-selecao');
-    if (modal) {
-        modal.style.display = 'flex'; // Garante visibilidade
-        modal.classList.add('active');
-    }
-};
-
-// Fecha ao clicar fora
-document.addEventListener('mousedown', (event) => {
-    const modal = document.getElementById('modal-emoji-selecao');
-    if (modal?.classList.contains('active') && event.target === modal) {
-        modal.classList.remove('active');
-        setTimeout(() => modal.style.display = 'none', 300); // Fecha após animação
-    }
-});
-
 // Função para disparar o efeito visual do emoji
 function dispararEfeitoEmoji(emoji, lado) {
     const cardId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
     const cardElement = document.getElementById(cardId);
+    
     if (!cardElement) return;
 
+    // Cria o elemento do emoji
     const emojiElement = document.createElement('div');
     emojiElement.className = 'floating-emoji';
     emojiElement.innerText = emoji;
 
-    // Posicionamento dinâmico sobre o card do jogador
+    // Pega a posição do card para saber de onde o emoji sai
     const rect = cardElement.getBoundingClientRect();
-    const centerX = rect.left + (rect.width / 2) - 20;
-    const centerY = rect.top - 20;
+    const centerX = rect.left + (rect.width / 2) - 20; // Ajuste para centralizar
+    const centerY = rect.top;
 
-    emojiElement.style.position = 'fixed'; // Importante para usar as coordenadas do rect
     emojiElement.style.left = `${centerX}px`;
     emojiElement.style.top = `${centerY}px`;
-    emojiElement.style.zIndex = '9999';
 
     document.body.appendChild(emojiElement);
 
-    setTimeout(() => emojiElement.remove(), 2500);
+    // Remove o elemento da memória depois que a animação termina
+    setTimeout(() => {
+        emojiElement.remove();
+    }, 2500);
 }
 
-// --- OUVINTE ÚNICO DE EMOJIS ---
-onValue(emojiRef, (snap) => {
-    const data = snap.val();
-    // Só dispara se o emoji tiver menos de 3 segundos (evita lixo de partidas anteriores)
-    if (data && data.ts && (Date.now() - data.ts < 3000)) {
-        dispararEfeitoEmoji(data.texto, data.lado);
-    }
-});
-
 window.enviarEmoji = function(emoji) {
+    // 1. FECHA O MODAL IMEDIATAMENTE
     const modalEmoji = document.getElementById('modal-emoji-selecao');
     if (modalEmoji) {
-        modalEmoji.classList.remove('active');
-        setTimeout(() => modalEmoji.style.display = 'none', 300);
+        modalEmoji.style.display = 'none';
+        modalEmoji.classList.remove('ativo', 'active', 'show');
     }
 
-    if (!meuLado) return;
+    // 2. VERIFICA SE O LADO ESTÁ DEFINIDO
+    if (!meuLado) {
+        console.warn("Lado não definido. Escolha uma cor antes de enviar emojis.");
+        return;
+    }
 
+    // 3. LÓGICA DE ENVIO (Firebase)
     if (modoJogo === 'online') {
+        // Padronizando os nomes para: 'texto' e 'ts' (conforme seu onValue)
         set(emojiRef, { 
             texto: emoji, 
             lado: meuLado, 
             ts: Date.now() 
-        });
+        }).catch(err => console.error("Erro ao enviar emoji:", err));
     } else {
-        dispararEfeitoEmoji(emoji, meuLado);
+        // Se for modo IA, apenas exibe localmente para diversão
+        exibirEmojiNaTela(emoji, meuLado);
     }
 };
-// fim emoji
 
 function atualizarUI() {
     document.getElementById('capturas-v').innerText = capturasV;
