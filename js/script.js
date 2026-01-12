@@ -1,4 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+// 1. Registrar presença (Garante compatibilidade com teclado de celular)
+import { onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 import { 
     getDatabase, 
     ref, 
@@ -587,12 +589,9 @@ if (modo === 'online') {
 
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
-    const checkboxLembrar = document.getElementById('check-lembrar'); // Novo ID sugerido no HTML
+    const checkboxLembrar = document.getElementById('check-lembrar');
     
-    // Pegamos o nome bruto para exibição e limpamos espaços
     const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
-    
-    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros
     const nomeFormatado = nomeOriginal.toLowerCase();
 
     if (nomeOriginal === "") {
@@ -600,7 +599,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
         return;
     }
 
-    // --- NOVIDADE: LÓGICA DE PERSISTÊNCIA (LEMBRAR-ME) ---
+    // 1. LÓGICA DE PERSISTÊNCIA (LEMBRAR-ME)
     if (checkboxLembrar && checkboxLembrar.checked) {
         localStorage.setItem('dama_user_remember', JSON.stringify({
             nome: nomeOriginal
@@ -609,46 +608,41 @@ window.confirmarCadastro = (ladoEscolhido) => {
         localStorage.removeItem('dama_user_remember');
     }
 
-    // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
+    // 2. ATUALIZAÇÃO DAS VARIÁVEIS GLOBAIS
     meuLado = ladoEscolhido;
-    meuNome = nomeFormatado; // Salvamos o formatado para lógica interna
+    meuNome = nomeOriginal; // Usamos o original para exibição
     mostrarMeuBotaoSair(); 
 
-    // 2. INVERSÃO VISUAL DA INTERFACE
+    // 3. INVERSÃO VISUAL DA INTERFACE
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
         document.body.classList.remove('visao-preto');
     }
 
-    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Visual imediato)
+    // 4. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
     if (modoJogo === 'online') {
-        // --- NOVIDADE: PERFIL PERMANENTE E MONITOR DE AMIGOS ---
-        // Criamos um nó fixo para o perfil (onde ficam os amigos)
+        // --- CHAMADA DO REGISTRO DE PRESENÇA (Lobby Global) ---
+        if (typeof window.registrarPresenca === 'function') {
+            window.registrarPresenca(nomeOriginal);
+        }
+
+        // PERFIL PERMANENTE E MONITOR DE AMIGOS
         const perfilRef = ref(db, `perfis/${nomeFormatado}`);
         update(perfilRef, {
             nomeExibicao: nomeOriginal,
             ultimaVezOnline: Date.now()
         });
 
-        // Inicia a função de monitorar amigos (status online)
         if (typeof iniciarMonitorAmigos === 'function') {
             iniciarMonitorAmigos(nomeFormatado);
         }
 
-        // --- REGISTRAR PRESENÇA ONLINE (SESSÃO ATUAL) ---
-        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
-        set(minhaPresencaRef, { 
-            online: true, 
-            nome: nomeOriginal,
-            lado: ladoEscolhido // Útil para saber quem está livre
-        });
-
-        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA ATUAL)
+        // 5. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA ESPECÍFICA)
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
@@ -656,12 +650,19 @@ window.confirmarCadastro = (ladoEscolhido) => {
         set(playerStatusRef, true);
         set(playerNameRef, nomeOriginal);
         
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO
+        // 6. CONFIGURAÇÃO DE DESCONEXÃO AUTOMÁTICA
+        // Importamos as funções necessárias para limpar o banco se o usuário sair
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-            pkg.onDisconnect(playerStatusRef).remove();
-            pkg.onDisconnect(playerNameRef).remove();
-            pkg.onDisconnect(playerPhotoRef).remove();
-            pkg.onDisconnect(minhaPresencaRef).remove();
+            const { onDisconnect } = pkg;
+            
+            // Remove o status da partida
+            onDisconnect(playerStatusRef).remove();
+            onDisconnect(playerNameRef).remove();
+            onDisconnect(playerPhotoRef).remove();
+            
+            // Também remove da lista de usuários online (Lobby)
+            const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
+            onDisconnect(minhaPresencaRef).remove();
         });
 
         onValue(gameRef, (snap) => {
@@ -669,14 +670,14 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }, { onlyOnce: true });
 
     } else {
-        // 6. MODO IA (OFFLINE)
+        // MODO IA (OFFLINE)
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL
+    // 7. FINALIZAÇÃO VISUAL DO MODAL
     const modal = document.getElementById('modal-cadastro');
     if (modal) modal.style.display = 'none';
     
@@ -685,6 +686,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
 
     desenhar();
 
+    // Início da jogada se for IA e for o turno dela
     if (modoJogo === 'ia') {
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
         if (turno === idTurnoIA) {
@@ -694,6 +696,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
+
 
 
 
@@ -937,24 +940,46 @@ const atualizarBolinhasStatus = (jogadoresOnline) => {
     }
 };
 
-// 1. Registrar presença (Garante compatibilidade com teclado de celular)
+
+
 window.registrarPresenca = (nome) => {
-    if (!nome) return;
+    if (!nome || nome.length < 2) return;
     
-    // Normaliza o nome antes de salvar no banco
     const nomeNormalizado = nome.trim().toLowerCase();
     const minhaPresencaRef = ref(db, `usuarios_online/${nomeNormalizado}`);
     
+    // 1. Marca como online
     set(minhaPresencaRef, { 
         online: true, 
-        nomeExibicao: nome.trim(), // Nome original com maiúsculas para a lista lateral
-        timestamp: Date.now() 
+        nomeExibicao: nome.trim(),
+        timestamp: serverTimestamp() // Recomendado usar o tempo do servidor
     });
     
-    import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-        pkg.onDisconnect(minhaPresencaRef).remove();
-    });
+    // 2. Garante que saia da lista ao fechar o app/navegador
+    onDisconnect(minhaPresencaRef).remove();
+    
+    console.log(`✅ Presença registrada para: ${nome}`);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1200,6 +1225,22 @@ function atualizarDestaqueTurno() {
         boxV.classList.remove('sua-vez');
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
