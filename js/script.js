@@ -47,15 +47,30 @@ onValue(playersRef, (snap) => {
     const btnV = document.getElementById('btn-escolher-vermelho');
     const btnP = document.getElementById('btn-escolher-preto');
     
-    // 1. NOTIFICAÇÃO DE ENTRADA (Saber quem acabou de entrar)
+    // 1. BUSCA DE NOMES E NOTIFICAÇÃO DE ENTRADA
+    // Consultamos o nó de nomes para saber QUEM entrou de fato
+    onValue(ref(db, 'partida_unica/nomes'), (nomeSnap) => {
+        const nomesRealTime = nomeSnap.val() || {};
 
-    if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
-        if (meuLado !== 'vermelho') notificarEntrada('Vermelho');
-    }
-    // Se o Preto não estava no banco e agora está, e não sou eu
-    if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
-        if (meuLado !== 'preto') notificarEntrada('Preto');
-    }
+        // Notificação para o lado Vermelho
+        if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
+            if (meuLado !== 'vermelho') {
+                const nomeParaExibir = nomesRealTime.vermelho || "Vermelho";
+                notificarEntrada(nomeParaExibir);
+            }
+        }
+
+        // Notificação para o lado Preto
+        if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
+            if (meuLado !== 'preto') {
+                const nomeParaExibir = nomesRealTime.preto || "Preto";
+                notificarEntrada(nomeParaExibir);
+            }
+        }
+
+        // Importante: Atualiza o histórico após verificar as notificações
+        jogadoresAntigos = { ...jogadoresAtuais };
+    }, { onlyOnce: true });
 
     // 2. GERENCIAMENTO DOS BOTÕES DE ESCOLHA
     if (btnV) {
@@ -65,7 +80,7 @@ onValue(playersRef, (snap) => {
         } else {
             btnV.disabled = false;
             btnV.style.display = 'flex';
-            btnV.innerText = "Vermelho Disponível";
+            btnV.innerHTML = '<span class="dot"></span> Vermelho Disponível';
         }
     }
 
@@ -76,27 +91,41 @@ onValue(playersRef, (snap) => {
         } else {
             btnP.disabled = false;
             btnP.style.display = 'flex';
-            btnP.innerText = "Preto Disponível";
+            btnP.innerHTML = '<span class="dot"></span> Preto Disponível';
         }
     }
 
     // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
-    const totalJogadores = Object.keys(jogadoresAtuais).length;
+    // Atualiza as bolinhas de status no placar
+    const statusV = document.getElementById('status-v');
+    const statusP = document.getElementById('status-p');
     
-    // Atualiza os pontinhos verde/cinza no placar
+    if (statusV) statusV.className = jogadoresAtuais.vermelho ? 'status-dot-placar online' : 'status-dot-placar';
+    if (statusP) statusP.className = jogadoresAtuais.preto ? 'status-dot-placar online' : 'status-dot-placar';
 
+    // Verifica se ambos estão presentes para iniciar a partida
     if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
-    if (!jogoIniciado) {
-        console.log("Partida Pronta! Ambos os jogadores estão online.");
+        if (!jogoIniciado) {
+            console.log("Partida Pronta! Ambos os jogadores estão online.");
+            // Você pode adicionar um alerta visual aqui: "Partida Iniciada!"
+        }
+        jogoIniciado = true;
+    } else {
+        jogoIniciado = false;
     }
-    jogoIniciado = true;
-} else {
-    jogoIniciado = false;
-}
-   
-   // Guarda o estado atual para a próxima comparação
-    jogadoresAntigos = { ...jogadoresAtuais };
 });
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ✅ Função para exibir o alerta visual de entrada
 function notificarEntrada(lado) {
@@ -167,12 +196,15 @@ onValue(vencedorRef, (snap) => {
     }
 });
 
+
+
+
 // --- VARIÁVEIS GLOBAIS ---
+let jogadoresAntigos = { vermelho: false, preto: false };
 let jogoIniciado = false;
 let partidaConfirmada = false;
 let monitoresIniciados = false;
 let temporizadoresSaida = {};
-let jogadoresAntigos = {};
 let nomesAnteriores = {};
 let modoJogo = 'online'; 
 let meuLado = new URLSearchParams(window.location.search).get('lado'); 
