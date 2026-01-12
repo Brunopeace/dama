@@ -421,52 +421,6 @@ window.alterarNome = function(lado) {
     }
 };
 
-// --- SISTEMA DE EMOJIS ---
-window.abrirModalEmoji = function(ladoDoBotao) {
-    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
-    document.getElementById('modal-emoji-selecao').classList.add('active');
-};
-
-document.addEventListener('mousedown', (event) => {
-    const modal = document.getElementById('modal-emoji-selecao');
-    if (modal?.classList.contains('active') && event.target === modal) {
-        modal.classList.remove('active');
-    }
-});
-
-// ✅ emojis
-
-function exibirEmojiNaTela(emoji, lado) {
-    const el = document.createElement('div');
-    el.className = 'float-emoji';
-    el.innerText = emoji;
-
-    if (lado === 'vermelho') {
-        el.classList.add('animar-subir');
-    } else {
-        el.classList.add('animar-descer');
-    }
-
-    document.body.appendChild(el);
-
-    setTimeout(() => {
-        el.remove();
-    }, 2000);
-}
-
-// --- OUVINTE ÚNICO DE EMOJIS ---
-onValue(emojiRef, (snap) => {
-    const data = snap.val();
-    
-    if (data && data.ts && (Date.now() - data.ts < 3000)) {
-        
-        exibirEmojiNaTela(data.texto, data.lado);
-        
-        if (typeof dispararEfeitoEmoji === 'function') {
-            dispararEfeitoEmoji(data.texto, data.lado);
-        }
-    }
-});
 
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
@@ -1216,61 +1170,94 @@ function atualizarDestaqueTurno() {
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+//✅
+
+// --- SISTEMA DE EMOJIS ---
+window.abrirModalEmoji = function(ladoDoBotao) {
+    // No online, só abre se for o SEU avatar. No offline, abre sempre.
+    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
+    
+    const modal = document.getElementById('modal-emoji-selecao');
+    if (modal) {
+        modal.style.display = 'flex'; // Garante visibilidade
+        modal.classList.add('active');
+    }
+};
+
+// Fecha ao clicar fora
+document.addEventListener('mousedown', (event) => {
+    const modal = document.getElementById('modal-emoji-selecao');
+    if (modal?.classList.contains('active') && event.target === modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.style.display = 'none', 300); // Fecha após animação
+    }
+});
+
 // Função para disparar o efeito visual do emoji
 function dispararEfeitoEmoji(emoji, lado) {
     const cardId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
     const cardElement = document.getElementById(cardId);
-    
     if (!cardElement) return;
 
-    // Cria o elemento do emoji
     const emojiElement = document.createElement('div');
     emojiElement.className = 'floating-emoji';
     emojiElement.innerText = emoji;
 
-    // Pega a posição do card para saber de onde o emoji sai
+    // Posicionamento dinâmico sobre o card do jogador
     const rect = cardElement.getBoundingClientRect();
-    const centerX = rect.left + (rect.width / 2) - 20; // Ajuste para centralizar
-    const centerY = rect.top;
+    const centerX = rect.left + (rect.width / 2) - 20;
+    const centerY = rect.top - 20;
 
+    emojiElement.style.position = 'fixed'; // Importante para usar as coordenadas do rect
     emojiElement.style.left = `${centerX}px`;
     emojiElement.style.top = `${centerY}px`;
+    emojiElement.style.zIndex = '9999';
 
     document.body.appendChild(emojiElement);
 
-    // Remove o elemento da memória depois que a animação termina
-    setTimeout(() => {
-        emojiElement.remove();
-    }, 2500);
+    setTimeout(() => emojiElement.remove(), 2500);
 }
 
+// --- OUVINTE ÚNICO DE EMOJIS ---
+onValue(emojiRef, (snap) => {
+    const data = snap.val();
+    // Só dispara se o emoji tiver menos de 3 segundos (evita lixo de partidas anteriores)
+    if (data && data.ts && (Date.now() - data.ts < 3000)) {
+        dispararEfeitoEmoji(data.texto, data.lado);
+    }
+});
+
 window.enviarEmoji = function(emoji) {
-    // 1. FECHA O MODAL IMEDIATAMENTE
     const modalEmoji = document.getElementById('modal-emoji-selecao');
     if (modalEmoji) {
-        modalEmoji.style.display = 'none';
-        modalEmoji.classList.remove('ativo', 'active', 'show');
+        modalEmoji.classList.remove('active');
+        setTimeout(() => modalEmoji.style.display = 'none', 300);
     }
 
-    // 2. VERIFICA SE O LADO ESTÁ DEFINIDO
-    if (!meuLado) {
-        console.warn("Lado não definido. Escolha uma cor antes de enviar emojis.");
-        return;
-    }
+    if (!meuLado) return;
 
-    // 3. LÓGICA DE ENVIO (Firebase)
     if (modoJogo === 'online') {
-        // Padronizando os nomes para: 'texto' e 'ts' (conforme seu onValue)
         set(emojiRef, { 
             texto: emoji, 
             lado: meuLado, 
             ts: Date.now() 
-        }).catch(err => console.error("Erro ao enviar emoji:", err));
+        });
     } else {
-        // Se for modo IA, apenas exibe localmente para diversão
-        exibirEmojiNaTela(emoji, meuLado);
+        dispararEfeitoEmoji(emoji, meuLado);
     }
 };
+// fim emoji
 
 function atualizarUI() {
     document.getElementById('capturas-v').innerText = capturasV;
