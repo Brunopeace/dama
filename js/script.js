@@ -39,7 +39,7 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-// Variável para comparar o estado anterior (coloque fora da função onValue)
+
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
     
@@ -225,6 +225,119 @@ if ('serviceWorker' in navigator) {
     });
 }
 
+
+
+
+
+
+//👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
+
+
+// Verifica se existe um usuário salvo no navegador
+window.addEventListener('DOMContentLoaded', () => {
+    const salvo = localStorage.getItem('dama_user');
+    if (salvo) {
+        const dados = JSON.parse(salvo);
+        document.getElementById('modal-input-nome').value = dados.nome;
+        document.getElementById('check-lembrar').checked = true;
+        meuNome = dados.nome.toLowerCase();
+        
+        // Se o usuário foi lembrado, podemos pular parte do cadastro ou preencher automático
+        console.log("Bem-vindo de volta, " + dados.nome);
+    }
+});
+
+// 👀👀👀👀👀👀👀👀👀👀
+function iniciarMonitorAmigos(meuNomeFormatado) {
+    const meusAmigosRef = ref(db, `perfis/${meuNomeFormatado}/amigos`);
+    const onlineRef = ref(db, `usuarios_online`);
+
+    onValue(meusAmigosRef, (snapshotAmigos) => {
+        const amigos = snapshotAmigos.val() || {};
+        
+        onValue(onlineRef, (snapshotOnline) => {
+            const online = snapshotOnline.val() || {};
+            const listaUl = document.getElementById('lista-amigos');
+            if (!listaUl) return;
+            
+            listaUl.innerHTML = "";
+            
+            Object.keys(amigos).forEach(nomeAmigo => {
+                const estaOnline = online[nomeAmigo];
+                const li = document.createElement('li');
+                li.className = 'jogador-item';
+                li.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="status-dot ${estaOnline ? 'online' : 'offline'}"></span>
+                        <span style="color: ${estaOnline ? '#fff' : '#888'}">${nomeAmigo}</span>
+                    </div>
+                    ${estaOnline ? `<button class="btn-desafiar" onclick="desafiarJogador('${nomeAmigo}')">DESAFIAR</button>` : '<small>Offline</small>'}
+                `;
+                listaUl.appendChild(li);
+            });
+        });
+    });
+}
+
+//👀👀👀👀👀👀👀👀👀👀
+window.adicionarAmigo = (nomeAmigo) => {
+    if (!meuNome) {
+        alert("Você precisa estar logado para adicionar amigos!");
+        return;
+    }
+
+    const nomeAmigoFormatado = nomeAmigo.toLowerCase();
+    
+    if (nomeAmigoFormatado === meuNome) {
+        alert("Você não pode adicionar a si mesmo!");
+        return;
+    }
+
+    // Referência no Firebase: perfis/seu-nome/amigos/nome-do-amigo
+    const amigosRef = ref(db, `perfis/${meuNome}/amigos/${nomeAmigoFormatado}`);
+    
+    set(amigosRef, {
+        nomeExibicao: nomeAmigo,
+        adicionadoEm: Date.now()
+    }).then(() => {
+        alert(`${nomeAmigo} foi adicionado à sua lista de amigos!`);
+    }).catch((error) => {
+        console.error("Erro ao adicionar amigo:", error);
+    });
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ---✅ SISTEMA DE FOTOS DO PLACAR (ATÉ 2MB COM COMPRESSÃO) ---
 window.carregarFoto = function(event, imgId, iconId) {
     const file = event.target.files[0];
@@ -404,17 +517,47 @@ if (modo === 'online') {
     }
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
+
 window.confirmarCadastro = (ladoEscolhido) => {
     const nomeInput = document.getElementById('modal-input-nome');
+    const checkboxLembrar = document.getElementById('check-lembrar'); // Novo ID sugerido no HTML
+    
     // Pegamos o nome bruto para exibição e limpamos espaços
     const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
     
-    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização nas chaves
+    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros
     const nomeFormatado = nomeOriginal.toLowerCase();
 
     if (nomeOriginal === "") {
         alert("Por favor, digite seu nome!");
         return;
+    }
+
+    // --- NOVIDADE: LÓGICA DE PERSISTÊNCIA (LEMBRAR-ME) ---
+    if (checkboxLembrar && checkboxLembrar.checked) {
+        localStorage.setItem('dama_user_remember', JSON.stringify({
+            nome: nomeOriginal
+        }));
+    } else {
+        localStorage.removeItem('dama_user_remember');
     }
 
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
@@ -435,14 +578,28 @@ window.confirmarCadastro = (ladoEscolhido) => {
     if (campoNome) campoNome.value = nomeOriginal;
 
     if (modoJogo === 'online') {
-        // --- REGISTRAR PRESENÇA ONLINE ---
-        // A chave no banco será sempre minúscula para facilitar a busca do oponente
-        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
-        set(minhaPresencaRef, { online: true, nome: nomeOriginal });
+        // --- NOVIDADE: PERFIL PERMANENTE E MONITOR DE AMIGOS ---
+        // Criamos um nó fixo para o perfil (onde ficam os amigos)
+        const perfilRef = ref(db, `perfis/${nomeFormatado}`);
+        update(perfilRef, {
+            nomeExibicao: nomeOriginal,
+            ultimaVezOnline: Date.now()
+        });
 
-        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
-        // ✅ CORREÇÃO CRÍTICA: Salvamos como 'vermelho' ou 'preto' por extenso 
-        // para que o iniciarMonitoramentoOnline consiga ler corretamente.
+        // Inicia a função de monitorar amigos (status online)
+        if (typeof iniciarMonitorAmigos === 'function') {
+            iniciarMonitorAmigos(nomeFormatado);
+        }
+
+        // --- REGISTRAR PRESENÇA ONLINE (SESSÃO ATUAL) ---
+        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
+        set(minhaPresencaRef, { 
+            online: true, 
+            nome: nomeOriginal,
+            lado: ladoEscolhido // Útil para saber quem está livre
+        });
+
+        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA ATUAL)
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
@@ -488,6 +645,26 @@ window.confirmarCadastro = (ladoEscolhido) => {
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function mostrarMeuBotaoSair() {
     // Remove qualquer botão de sair existente para evitar duplicatas
@@ -740,22 +917,115 @@ onValue(listaJogadoresRef, (snapshot) => {
     if (listaUl) {
         listaUl.innerHTML = ""; 
         const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
+        
         for (let chave in jogadoresOnline) {
             if (chave === meuNomeRef) continue; 
+            
             const dados = jogadoresOnline[chave];
+            const nomeExibicao = dados.nomeExibicao || chave;
+            
             const li = document.createElement('li');
             li.className = 'jogador-item';
+            
+            // Renderização do item com a nova estrutura de botões
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot online"></span>
-                    <span>${dados.nomeExibicao || chave}</span>
+                    <span>${nomeExibicao}</span>
                 </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
+                <div class="jogador-controles" style="display: flex; gap: 5px;">
+                    <button class="btn-adicionar-amigo" 
+                            onclick="adicionarAmigo('${nomeExibicao}')" 
+                            title="Adicionar aos Amigos"
+                            style="background: #4a90e2; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;">
+                        👤+
+                    </button>
+                    
+                    <button class="btn-desafiar" 
+                            onclick="desafiarJogador('${nomeExibicao}')">
+                        CONVIDAR
+                    </button>
+                </div>
             `;
             listaUl.appendChild(li);
         }
     }
 });
+
+// FUNÇÃO AUXILIAR: Adicionar Amigo no Firebase
+window.adicionarAmigo = (nomeAmigo) => {
+    if (!meuNome) {
+        alert("Você precisa estar logado para adicionar amigos!");
+        return;
+    }
+
+    const nomeAmigoFormatado = nomeAmigo.toLowerCase();
+    if (nomeAmigoFormatado === meuNome.toLowerCase()) return;
+
+    // Salva na lista permanente do seu perfil
+    const amigosRef = ref(db, `perfis/${meuNome.toLowerCase()}/amigos/${nomeAmigoFormatado}`);
+    
+    set(amigosRef, {
+        nomeExibicao: nomeAmigo,
+        desde: Date.now()
+    }).then(() => {
+        alert(`${nomeAmigo} agora é seu amigo!`);
+    });
+};
+
+// troca de abas
+
+window.switchTab = (event, tabId) => {
+    // 1. Previne o comportamento padrão do clique
+    if (event) event.preventDefault();
+
+    // 2. Seleciona todos os conteúdos de aba e remove a visibilidade
+    const allTabs = document.querySelectorAll('.tab-content');
+    allTabs.forEach(tab => {
+        tab.classList.remove('active');
+        tab.style.display = 'none'; // Reforço via JS
+    });
+
+    // 3. Remove o destaque de todos os botões
+    const allButtons = document.querySelectorAll('.tab-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+
+    // 4. Mostra a aba clicada
+    const selectedTab = document.getElementById(tabId);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.style.display = 'block'; // Mostra a div
+    }
+
+    // 5. Destaca o botão clicado
+    if (event && event.currentTarget) {
+        event.currentTarget.classList.add('active');
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
