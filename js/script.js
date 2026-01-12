@@ -296,6 +296,27 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // 👀👀👀👀👀👀👀👀👀👀
 function iniciarMonitorAmigos(meuNomeFormatado) {
     const meusAmigosRef = ref(db, `perfis/${meuNomeFormatado}/amigos`);
@@ -328,6 +349,7 @@ function iniciarMonitorAmigos(meuNomeFormatado) {
     });
 }
 
+
 //👀👀👀👀👀👀👀👀👀👀
 window.adicionarAmigo = (nomeAmigo) => {
     if (!meuNome) {
@@ -352,6 +374,30 @@ window.adicionarAmigo = (nomeAmigo) => {
         alert(`${nomeAmigo} foi adicionado à sua lista de amigos!`);
     }).catch((error) => {
         console.error("Erro ao adicionar amigo:", error);
+    });
+};
+
+// ✅ Torna a função acessível para o clique do botão no HTML
+window.desafiarJogador = function(nomeDoOponente) {
+    if (!nomeDoOponente) return;
+    
+    // 1. Feedback visual imediato
+    console.log("Desafiando: " + nomeDoOponente);
+    alert("Enviando convite para " + nomeDoOponente + "...");
+
+    // 2. Lógica para o Firebase (Criar um nó de convite)
+    // Aqui você define que quer jogar com essa pessoa
+    const conviteRef = ref(db, `convites/${nomeDoOponente.toLowerCase()}`);
+    
+    set(conviteRef, {
+        de: meuNome,
+        tipo: 'desafio',
+        ts: Date.now(),
+        status: 'pendente'
+    }).then(() => {
+        console.log("Convite registrado no banco!");
+    }).catch(err => {
+        console.error("Erro ao desafiar:", err);
     });
 };
 
@@ -910,71 +956,7 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-// 2. Ouvinte principal do Firebase
-onValue(listaJogadoresRef, (snapshot) => {
-    const jogadoresOnline = snapshot.val() || {};
-    atualizarBolinhasStatus(jogadoresOnline);
 
-    // Atualiza lista lateral
-    const listaUl = document.getElementById('lista-jogadores');
-    if (listaUl) {
-        listaUl.innerHTML = ""; 
-        const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
-        
-        for (let chave in jogadoresOnline) {
-            if (chave === meuNomeRef) continue; 
-            
-            const dados = jogadoresOnline[chave];
-            const nomeExibicao = dados.nomeExibicao || chave;
-            
-            const li = document.createElement('li');
-            li.className = 'jogador-item';
-            
-            // Renderização do item com a nova estrutura de botões
-            li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="status-dot online"></span>
-                    <span>${nomeExibicao}</span>
-                </div>
-                <div class="jogador-controles" style="display: flex; gap: 5px;">
-                    <button class="btn-adicionar-amigo" 
-                            onclick="adicionarAmigo('${nomeExibicao}')" 
-                            title="Adicionar aos Amigos"
-                            style="background: #4a90e2; color: white; border: none; border-radius: 4px; padding: 2px 8px; cursor: pointer;">
-                        👤+
-                    </button>
-                    
-                    <button class="btn-desafiar" 
-                            onclick="desafiarJogador('${nomeExibicao}')">
-                        CONVIDAR
-                    </button>
-                </div>
-            `;
-            listaUl.appendChild(li);
-        }
-    }
-});
-
-// FUNÇÃO AUXILIAR: Adicionar Amigo no Firebase
-window.adicionarAmigo = (nomeAmigo) => {
-    if (!meuNome) {
-        alert("Você precisa estar logado para adicionar amigos!");
-        return;
-    }
-
-    const nomeAmigoFormatado = nomeAmigo.toLowerCase();
-    if (nomeAmigoFormatado === meuNome.toLowerCase()) return;
-
-    // Salva na lista permanente do seu perfil
-    const amigosRef = ref(db, `perfis/${meuNome.toLowerCase()}/amigos/${nomeAmigoFormatado}`);
-    
-    set(amigosRef, {
-        nomeExibicao: nomeAmigo,
-        desde: Date.now()
-    }).then(() => {
-        alert(`${nomeAmigo} agora é seu amigo!`);
-    });
-};
 
 // troca de abas
 
