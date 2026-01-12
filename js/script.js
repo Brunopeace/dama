@@ -128,11 +128,20 @@ onValue(playersRef, (snap) => {
 
 
 // ✅ Função para exibir o alerta visual de entrada
-function notificarEntrada(lado) {
+// ✅ Função para exibir o alerta visual de entrada (Corrigida)
+function notificarEntrada(nomeJogador) {
+    // Se por algum motivo o nome vier vazio, usamos um padrão para não dar erro
+    const nomeExibir = nomeJogador || "Convidado";
+
     const alerta = document.createElement('div');
     alerta.className = 'feedback-entrada';
-    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nome}</b> entrou na sala!`;
+    
+    // CORREÇÃO: Usamos a variável 'nomeExibir' que definimos acima
+    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nomeExibir}</b> entrou na sala!`;
     document.body.appendChild(alerta);
+
+    // Efeito suave de transição (opcional, precisa de CSS)
+    alerta.style.transition = "opacity 1s ease";
 
     // Remove automaticamente após 3 segundos
     setTimeout(() => {
@@ -140,6 +149,14 @@ function notificarEntrada(lado) {
         setTimeout(() => alerta.remove(), 1000);
     }, 3000);
 }
+
+
+
+
+
+
+
+
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
