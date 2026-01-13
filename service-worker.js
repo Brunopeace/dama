@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dama-v68';
+const CACHE_NAME = 'dama-v69';
 const ASSETS = [
   './',
   './index.html',
