@@ -20,6 +20,7 @@ const firebaseConfig = {
 };
 
 // Inicialização
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 let meuNome = "";
@@ -28,6 +29,7 @@ const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
+const convitesRef = ref(db, 'partida_unica/convites');
 
 // Monitor de nomes
 onValue(nomesRef, (snap) => {
@@ -700,17 +702,28 @@ window.registrarPresenca = (nome) => {
     });
 };
 
+//implementação nova
+
 // Função para convidar um jogador da lista lateral
 window.desafiarJogador = function(nomeOponente) {
-    console.log("Desafiando o jogador:", nomeOponente);
+    if (!meuNome) return alert("Defina seu nome antes de convidar!");
     
-    // Exemplo de lógica para enviar um convite via Firebase
+    const idOponente = nomeOponente.trim().toLowerCase();
+    const idMeu = meuNome.trim().toLowerCase();
+
     if (confirm(`Deseja enviar um convite para ${nomeOponente}?`)) {
-        // Aqui você implementaria a lógica de convite, por exemplo:
-        // set(ref(db, `convites/${nomeOponente}`), { de: meuNome, ts: Date.now() });
-        alert("Convite enviado (funcionalidade em desenvolvimento)!");
+        // Cria um convite no Firebase para o oponente
+        set(ref(db, `partida_unica/convites/${idOponente}`), {
+            de: meuNome,
+            idDe: idMeu,
+            status: 'pendente',
+            timestamp: Date.now()
+        }).then(() => {
+            alert("Convite enviado! Aguardando resposta...");
+        });
     }
 };
+
 
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
@@ -737,6 +750,36 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
+
+// Escutar convites direcionados a MIM
+const meuIdRef = meuNome.trim().toLowerCase();
+onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
+    const convite = snapshot.val();
+    
+    if (convite && convite.status === 'pendente') {
+        const aceitou = confirm(`${convite.de} está te desafiando! Aceitar?`);
+        
+        if (aceitou) {
+            // 1. Atualiza o convite para aceito
+            update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
+            
+            // 2. Limpa o tabuleiro para começar a partida
+            reiniciarJogoOnline(); // Chame sua função que reseta o board
+            
+            alert("Partida iniciada!");
+        } else {
+            // Se recusar, removemos o convite
+            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        }
+    } else if (convite && convite.status === 'aceito') {
+        // Isso aqui é para quem ENVIOU o convite saber que o outro aceitou
+        alert("O oponente aceitou o desafio! Começando...");
+        remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+    }
+});
+
+// fim da implementação nova
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -927,7 +970,18 @@ function atualizarDestaqueTurno() {
     }
 }
 
-// ✅ emojis
+
+
+
+
+
+
+
+
+
+
+
+// ✅ emojis 👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
 
 function exibirEmojiNaTela(emoji, lado) {
     const el = document.createElement('div');
