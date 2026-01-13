@@ -1,5 +1,3 @@
-                            
-/* RESET E CONFIGURAÇÕES GERAIS */
 * {
     margin: 0;
     padding: 0;
@@ -7,7 +5,6 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    /* Impede que elementos filhos criem rolagem acidental */
     max-width: 100%; 
 }
 
@@ -17,11 +14,11 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 5px; /* Reduzido de 10px para 5px */
-    height: 100vh; /* Mudado de min-height para height fixo */
+    padding: 5px;
+    height: 100vh;
     width: 100vw;
-    overflow: hidden; /* TRAVA A ROLAGEM TOTAL */
-    position: fixed; /* Impede o "pulo" da barra de endereços no mobile */
+    overflow: hidden;
+    position: fixed;
 }
 
 
@@ -32,7 +29,7 @@ body {
     padding: 5px;
     border-radius: 5px;
     cursor: pointer;
-    transition: all 0.3s ease; /* Suaviza o efeito ao passar o mouse */
+    transition: all 0.3s ease;
     font-weight: bold;
     width: 80px;
 }
@@ -52,9 +49,17 @@ body {
 }
 
 /* Configuração de ordem padrão (Vermelho em baixo) */
-#container-topo { order: 1; } /* Preto inicia no topo */
-.centro         { order: 2; } /* Tabuleiro sempre no meio */
-#container-base { order: 3; } /* Vermelho inicia na base */
+#container-topo {
+    order: 1;
+    }
+    
+.centro {
+    order: 2;
+    }
+    
+#container-base {
+    order: 3;
+    }
 
 /* INVERSÃO: Quando o jogador for o PRETO */
 body.visao-preto #container-topo {
@@ -122,8 +127,15 @@ body.visao-preto .centro {
 }
 
 @keyframes descerSaida {
-    from { transform: translate(-50%, -50px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
+    from {
+        transform: translate(-50%, -50px);
+        opacity: 0;
+        }
+        
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+        }
 }
 
 /* CONTAINER DO BOTÃO PWA - FIXO NA LATERAL DIREITA */
@@ -157,11 +169,10 @@ body.visao-preto .centro {
     white-space: nowrap; /* Garante que o texto fique em uma linha só */
 }
 
-/* EFEITO AO PASSAR O MOUSE OU TOCAR */
 .btn-pwa:hover {
     background: #ffce00;
     color: #000;
-    padding-right: 30px; /* Dá a sensação de que o botão "saiu" mais da borda */
+    padding-right: 30px;
 }
 
 .btn-pwa:active {
@@ -174,16 +185,23 @@ body.visao-preto .centro {
 
 /* ANIMAÇÃO DE PULSAÇÃO (Sutil na lateral) */
 @keyframes pulse-pwa {
-    0% { transform: translateX(0); }
-    50% { transform: translateX(-5px); } /* O botão dá uma "espiadinha" para a esquerda */
-    100% { transform: translateX(0); }
+    0% {
+    transform: translateX(0);
+    }
+    
+    50% {
+    transform: translateX(-5px);
+    }
+    
+    100% {
+    transform: translateX(0);
+    }
 }
 
 #pwa-install-container {
     animation: pulse-pwa 2s infinite ease-in-out;
 }
 
-/* AJUSTE PARA O S23 FE NÃO CORTAR O TABULEIRO */
 @media (max-width: 500px) {
     .btn-pwa {
         padding: 10px 14px;
@@ -359,7 +377,10 @@ body.visao-preto .centro {
     display: flex; align-items: center; justify-content: center;
     border: 2px solid #ffce00;
 }
-.logo-img { width: 45px; height: 45px; }
+.logo-img {
+    width: 45px;
+    height: 45px;
+    }
 
 .input-group label {
     display: block; font-size: 13px; color: #888;
@@ -371,7 +392,10 @@ body.visao-preto .centro {
     display: flex; align-items: center;
 }
 
-.input-with-icon .icon { position: absolute; left: 15px; }
+.input-with-icon .icon {
+    position: absolute;
+    left: 15px;
+    }
 
 .input-with-icon input {
     width: 100%; padding: 14px 14px 14px 45px !important;
@@ -414,6 +438,7 @@ body.visao-preto .centro {
     font-weight: bold;
     font-size: 15px;
     }
+    
 .card-desc {
     font-size: 12px;
     color: #777;
@@ -438,6 +463,7 @@ body.visao-preto .centro {
     justify-content: center;
     gap: 8px;
 }
+
 .side-btn.red {
     background: #b91d1d;
     color: white;
@@ -546,7 +572,6 @@ body.visao-preto .centro {
     padding: 0 10px;
 }
 
-
 /* CAIXA DO JOGADOR (CARD) */
 .count-box {
     position: relative;
@@ -603,30 +628,14 @@ body.visao-preto .centro {
     gap: 5px; /* Espaço entre os elementos */
 }
 
-/* A bolinha de status */
-.status-dot-placar {
-    width: 10px;
-    height: 10px;
-    background-color: #444; /* Cor cinza (offline) */
-    border-radius: 50%;
-    flex-shrink: 0; /* Impede que a bolinha amasse */
-    transition: all 0.3s ease;
-}
-
-/* Classe que será ativada via JavaScript */
-.status-dot-placar.online {
-    background-color: #00ff00 !important; /* Verde neon */
-    box-shadow: 0 0 8px #00ff00;
-    
-}
-
-/* Estilo base da bolinha (Offline) */
+/* Estilo da bolinha */
 .status-dot-placar {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background-color: #ff0000; /* Cinza quando estável/offline */
-    display: none; /* O JS controla a exibição */
+    background-color: #ff0000;
+    display: none;
+    flex-shrink: 0;
     transition: all 0.3s ease;
 }
 
@@ -1061,7 +1070,6 @@ body.visao-preto .centro {
     75% { transform: scale(1.02) translateX(4px); }
 }
 
-
  /*Lobby*/
 
 /* --- CONTAINER DO LOBBY (SALA DE ESPERA) --- */
@@ -1147,38 +1155,4 @@ body.visao-preto .centro {
     transform: scale(0.95);
 }
 
-/* --- BOLINHA ONLINE COM ANIMAÇÃO (PULSANDO) --- */
-.status-dot-placar {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    background-color: #555; /* Offline por padrão */
-}
-
-.status-dot-placar.online {
-    background-color: #00ff00 !important;
-    box-shadow: 0 0 8px #00ff00;
-    animation: pulsarStatus 1.5s infinite ease-in-out;
-}
-
-@keyframes pulsarStatus {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-    50% {
-        transform: scale(1.2);
-        box-shadow: 0 0 15px #00ff00;
-        opacity: 0.7;
-    }
-    100% {
-        transform: scale(1);
-        box-shadow: 0 0 5px #00ff00;
-        opacity: 1;
-    }
-}
-
-
-/* Fim do lobby */
+/* fim do lobby */
