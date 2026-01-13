@@ -39,22 +39,6 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ✅ Versão corrigida: Agora aceita o nome como parâmetro
 function notificarEntrada(lado, nomeJogador) { 
     const alerta = document.createElement('div');
@@ -131,45 +115,6 @@ onValue(playersRef, (snap) => {
     // Guarda o estado atual para a próxima comparação
     jogadoresAntigos = { ...jogadoresAtuais };
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -755,28 +700,6 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // Função para convidar um jogador da lista lateral
 window.desafiarJogador = function(nomeOponente) {
     console.log("Desafiando o jogador:", nomeOponente);
@@ -814,47 +737,6 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -1045,18 +927,7 @@ function atualizarDestaqueTurno() {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// ✅ emojis 👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
+// ✅ emojis
 
 function exibirEmojiNaTela(emoji, lado) {
     const el = document.createElement('div');
