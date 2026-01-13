@@ -39,7 +39,38 @@ onValue(nomesRef, (snap) => {
     if (nomes.preto) document.getElementById('input-nome-p').value = nomes.preto;
 });
 
-// Variável para comparar o estado anterior (coloque fora da função onValue)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// ✅ Versão corrigida: Agora aceita o nome como parâmetro
+function notificarEntrada(lado, nomeJogador) { 
+    const alerta = document.createElement('div');
+    alerta.className = 'feedback-entrada';
+    // Se o nomeJogador não for enviado, usamos o lado (ex: "Jogador Vermelho")
+    const nomeExibicao = nomeJogador || lado; 
+    
+    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nomeExibicao}</b> entrou na sala!`;
+    document.body.appendChild(alerta);
+
+    setTimeout(() => {
+        alerta.style.opacity = '0';
+        setTimeout(() => alerta.remove(), 1000);
+    }, 3000);
+}
+
 onValue(playersRef, (snap) => {
     if (modoJogo !== 'online') return;
     
@@ -47,14 +78,21 @@ onValue(playersRef, (snap) => {
     const btnV = document.getElementById('btn-escolher-vermelho');
     const btnP = document.getElementById('btn-escolher-preto');
     
-    // 1. NOTIFICAÇÃO DE ENTRADA (Saber quem acabou de entrar)
-
+    // 1. NOTIFICAÇÃO DE ENTRADA (Sincronizado com os nomes do placar)
+    // Se o Vermelho entrou agora e não sou eu
     if (jogadoresAtuais.vermelho && !jogadoresAntigos.vermelho) {
-        if (meuLado !== 'vermelho') notificarEntrada('Vermelho');
+        if (meuLado !== 'vermelho') {
+            const nomeVermelho = document.getElementById('input-nome-v')?.value || 'Vermelho';
+            notificarEntrada('Vermelho', nomeVermelho);
+        }
     }
-    // Se o Preto não estava no banco e agora está, e não sou eu
+
+    // Se o Preto entrou agora e não sou eu
     if (jogadoresAtuais.preto && !jogadoresAntigos.preto) {
-        if (meuLado !== 'preto') notificarEntrada('Preto');
+        if (meuLado !== 'preto') {
+            const nomePreto = document.getElementById('input-nome-p')?.value || 'Preto';
+            notificarEntrada('Preto', nomePreto);
+        }
     }
 
     // 2. GERENCIAMENTO DOS BOTÕES DE ESCOLHA
@@ -81,36 +119,57 @@ onValue(playersRef, (snap) => {
     }
 
     // 3. LÓGICA DE STATUS ONLINE E TRAVA DE JOGO
-    const totalJogadores = Object.keys(jogadoresAtuais).length;
-    
-    // Atualiza os pontinhos verde/cinza no placar
-
     if (jogadoresAtuais.vermelho && jogadoresAtuais.preto) {
-    if (!jogoIniciado) {
-        console.log("Partida Pronta! Ambos os jogadores estão online.");
+        if (!jogoIniciado) {
+            console.log("Partida Pronta! Ambos os jogadores estão online.");
+        }
+        jogoIniciado = true;
+    } else {
+        jogoIniciado = false;
     }
-    jogoIniciado = true;
-} else {
-    jogoIniciado = false;
-}
    
-   // Guarda o estado atual para a próxima comparação
+    // Guarda o estado atual para a próxima comparação
     jogadoresAntigos = { ...jogadoresAtuais };
 });
 
-// ✅ Função para exibir o alerta visual de entrada
-function notificarEntrada(lado) {
-    const alerta = document.createElement('div');
-    alerta.className = 'feedback-entrada';
-    alerta.innerHTML = `<span>🎮</span> Jogador <b>${nome}</b> entrou na sala!`;
-    document.body.appendChild(alerta);
 
-    // Remove automaticamente após 3 segundos
-    setTimeout(() => {
-        alerta.style.opacity = '0';
-        setTimeout(() => alerta.remove(), 1000);
-    }, 3000);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ✅ Monitor do estado do Tabuleiro (Sincroniza apenas as peças e o turno)
 onValue(gameRef, (snapshot) => {
@@ -318,40 +377,6 @@ document.addEventListener('mousedown', (event) => {
     const modal = document.getElementById('modal-emoji-selecao');
     if (modal?.classList.contains('active') && event.target === modal) {
         modal.classList.remove('active');
-    }
-});
-
-// ✅ emojis
-
-function exibirEmojiNaTela(emoji, lado) {
-    const el = document.createElement('div');
-    el.className = 'float-emoji';
-    el.innerText = emoji;
-
-    if (lado === 'vermelho') {
-        el.classList.add('animar-subir');
-    } else {
-        el.classList.add('animar-descer');
-    }
-
-    document.body.appendChild(el);
-
-    setTimeout(() => {
-        el.remove();
-    }, 2000);
-}
-
-// --- OUVINTE ÚNICO DE EMOJIS ---
-onValue(emojiRef, (snap) => {
-    const data = snap.val();
-    
-    if (data && data.ts && (Date.now() - data.ts < 3000)) {
-        
-        exibirEmojiNaTela(data.texto, data.lado);
-        
-        if (typeof dispararEfeitoEmoji === 'function') {
-            dispararEfeitoEmoji(data.texto, data.lado);
-        }
     }
 });
 
@@ -730,12 +755,44 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-// 2. Ouvinte principal do Firebase
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Função para convidar um jogador da lista lateral
+window.desafiarJogador = function(nomeOponente) {
+    console.log("Desafiando o jogador:", nomeOponente);
+    
+    // Exemplo de lógica para enviar um convite via Firebase
+    if (confirm(`Deseja enviar um convite para ${nomeOponente}?`)) {
+        // Aqui você implementaria a lógica de convite, por exemplo:
+        // set(ref(db, `convites/${nomeOponente}`), { de: meuNome, ts: Date.now() });
+        alert("Convite enviado (funcionalidade em desenvolvimento)!");
+    }
+};
+
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
     atualizarBolinhasStatus(jogadoresOnline);
 
-    // Atualiza lista lateral
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
@@ -745,6 +802,7 @@ onValue(listaJogadoresRef, (snapshot) => {
             const dados = jogadoresOnline[chave];
             const li = document.createElement('li');
             li.className = 'jogador-item';
+            // O onclick abaixo agora funcionará porque definimos window.desafiarJogador
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot online"></span>
@@ -756,6 +814,47 @@ onValue(listaJogadoresRef, (snapshot) => {
         }
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
@@ -946,31 +1045,34 @@ function atualizarDestaqueTurno() {
     }
 }
 
-// Função para disparar o efeito visual do emoji
-function dispararEfeitoEmoji(emoji, lado) {
-    const cardId = lado === 'vermelho' ? 'box-vermelho' : 'box-preto';
-    const cardElement = document.getElementById(cardId);
-    
-    if (!cardElement) return;
 
-    // Cria o elemento do emoji
-    const emojiElement = document.createElement('div');
-    emojiElement.className = 'floating-emoji';
-    emojiElement.innerText = emoji;
 
-    // Pega a posição do card para saber de onde o emoji sai
-    const rect = cardElement.getBoundingClientRect();
-    const centerX = rect.left + (rect.width / 2) - 20; // Ajuste para centralizar
-    const centerY = rect.top;
 
-    emojiElement.style.left = `${centerX}px`;
-    emojiElement.style.top = `${centerY}px`;
 
-    document.body.appendChild(emojiElement);
 
-    // Remove o elemento da memória depois que a animação termina
+
+
+
+
+
+
+// ✅ emojis 👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
+
+function exibirEmojiNaTela(emoji, lado) {
+    const el = document.createElement('div');
+    el.className = 'float-emoji';
+    el.innerText = emoji;
+
+    if (lado === 'vermelho') {
+        el.classList.add('animar-subir');
+    } else {
+        el.classList.add('animar-descer');
+    }
+
+    document.body.appendChild(el);
+
     setTimeout(() => {
-        emojiElement.remove();
+        el.remove();
     }, 2500);
 }
 
