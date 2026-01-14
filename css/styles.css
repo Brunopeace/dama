@@ -382,30 +382,6 @@ body.visao-preto .centro {
     height: 45px;
     }
 
-.input-group label {
-    display: block; font-size: 13px; color: #888;
-    margin-bottom: 8px; text-align: left;
-}
-
-.input-with-icon {
-    position: relative;
-    display: flex; align-items: center;
-}
-
-.input-with-icon .icon {
-    position: absolute;
-    left: 15px;
-    }
-
-.input-with-icon input {
-    width: 100%; padding: 14px 14px 14px 45px !important;
-    background: #252525 !important;
-    border: 1px solid #333 !important;
-    border-radius: 12px !important;
-    margin-bottom: 0 !important;
-    color: yellow !important;
-}
-
 /* Grid de Opções */
 .modo-grid { display: grid; gap: 12px; margin-top: 10px; }
 
@@ -425,8 +401,10 @@ body.visao-preto .centro {
     }
 
 .option-card.selected {
-    border-color: #ffce00;
-    background: rgba(255, 206, 0, 0.05);
+    border-color: #ff5f6d;
+    background: rgba(255, 95, 109, 0.2);
+    box-shadow: 0 0 15px rgba(255, 95, 109, 0.4);
+    transform: scale(1.05);
 }
 
 .card-icon {
@@ -937,8 +915,7 @@ body.visao-preto .centro {
 .btn-v { background: #ff5f6d; color: white; }
 .btn-p { background: #444; color: white; border: 1px solid #666; }
 
-.btn-novo-jogo { background: #ffce00; color: black; margin-top: 20px; }
-.btn-novo-jogo:hover { background: #e6b800; transform: scale(1.05); }
+
 
 /* estilo css emoji novo*/
 
@@ -1156,3 +1133,115 @@ body.visao-preto .centro {
 }
 
 /* fim do lobby */
+
+/* --- SISTEMA DE ABAS (LOGIN/CADASTRO) --- */
+
+.modal-card.professional-ui {
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    backdrop-filter: blur(10px);
+}
+
+/* --- ABAS DE NAVEGAÇÃO TIPO "SEGMENTED CONTROL" --- */
+.auth-tabs {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    border: none;
+}
+
+.auth-tabs button {
+    flex: 1;
+    border: none;
+    background: none;
+    color: #888;
+    padding: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.auth-tabs button.active {
+    background: #ff5f6d;
+    color: white;
+    box-shadow: 0 4px 12px rgba(255, 95, 109, 0.3);
+}
+
+/* --- INPUTS REESTILIZADOS --- */
+.input-group label {
+    font-weight: 600;
+    color: #efefef;
+    margin-left: 2px;
+    font-size: 0.85rem;
+}
+
+.input-group input {
+
+    width: 100%; padding: 14px 14px 14px 45px !important;
+    background: #252525 !important;
+    border: 1px solid #333 !important;
+    border-radius: 12px !important;
+    margin-bottom: 0 !important;
+    color: yellow !important;    
+}
+
+.input-group input:focus {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #ff5f6d;
+    box-shadow: 0 0 0 4px rgba(255, 95, 109, 0.15);
+}
+
+/* --- BOTÕES DE AÇÃO --- */
+.btn-novo-jogo {
+    width: 100%;
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: transform 0.1s active, opacity 0.2s;
+}
+   
+.btn-novo-jogo:hover {
+    background: green;
+    transform: scale(1.05);
+    }
+
+.btn-novo-jogo:active {
+    transform: scale(0.98);
+}
+
+.remember-me-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -10px 0 20px 5px; /* Ajusta o espaçamento */
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.remember-me-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #ff5f6d; /* Cor do seu tema */
+}
+
+.remember-me-container label {
+    color: #aaa;
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+}
