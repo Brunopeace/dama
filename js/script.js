@@ -30,6 +30,14 @@ const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
 const convitesRef = ref(db, 'partida_unica/convites');
+const inputNome = document.getElementById('input-nome'); // Ajuste para o ID do seu campo de texto
+if (inputNome) {
+    inputNome.addEventListener('change', (e) => {
+        meuNome = e.target.value;
+        // Ao definir o nome, já podemos nos registrar como online
+        tornarOnline(); 
+    });
+}
 
 // Monitor de nomes
 onValue(nomesRef, (snap) => {
@@ -683,7 +691,7 @@ const atualizarBolinhasStatus = (jogadoresOnline) => {
     }
 };
 
-// 1. Registrar presença (Garante compatibilidade com teclado de celular)
+
 window.registrarPresenca = (nome) => {
     if (!nome) return;
     
@@ -701,26 +709,6 @@ window.registrarPresenca = (nome) => {
         pkg.onDisconnect(minhaPresencaRef).remove();
     });
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //implementação nova
 
@@ -821,6 +809,22 @@ onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
         console.log("Partida iniciada como Vermelho.");
     }
 });
+
+function tornarOnline() {
+    if (!meuNome) return;
+    const meuId = meuNome.trim().toLowerCase();
+    const minhaPresencaRef = ref(db, `jogadores_online/${meuId}`);
+    
+    // Salva na lista global de quem está no site agora
+    set(minhaPresencaRef, {
+        nomeExibicao: meuNome,
+        status: "online",
+        lastChanged: Date.now()
+    });
+
+    // Remove da lista se o jogador fechar a aba
+    onDisconnect(minhaPresencaRef).remove();
+}
 
 // fim da implementação nova
 
@@ -1355,41 +1359,28 @@ function avaliarTabuleiro(mapa, turnoIA) {
 
             if (v === 0) continue;
 
-            // Identifica se a peça pertence à IA ou ao Humano
             const ehIA = (turnoIA === 1 && (v === 1 || v === 3)) ||
                          (turnoIA === 2 && (v === 2 || v === 4));
 
-            // --- 1. VALOR BASE DA PEÇA ---
-            // Usamos valores maiores (100 e 300) para permitir maior precisão nos bônus
             let valorPeca = (v === 3 || v === 4) ? 300 : 100;
 
-            // --- 2. BÔNUS DE POSICIONAMENTO ESTRATÉGICO ---
-            
-            // Controle do Centro: Peças no centro (linhas 3,4,5 e colunas 2,3,4,5) 
-            // dominam mais o tabuleiro e são mais difíceis de cercar.
             if (r >= 2 && r <= 5 && c >= 2 && c <= 5) {
                 valorPeca += 25;
             }
 
-            // Segurança nas Bordas: Peças nas laterais não podem ser capturadas por dois lados.
             if (c === 0 || c === 7) {
                 valorPeca += 15;
             }
 
-            // Defesa da Base: Incentiva a IA a manter as peças da última linha paradas 
-            // para evitar que o jogador faça dama facilmente.
             if ((turnoIA === 1 && r === 7) || (turnoIA === 2 && r === 0)) {
                 valorPeca += 40;
             }
 
-            // --- 3. CÁLCULO DO SCORE FINAL ---
             if (ehIA) {
                 score += valorPeca;
-                // Bônus por avanço: quanto mais perto de virar dama, melhor
                 const progresso = (turnoIA === 1 ? (7 - r) : r);
                 score += progresso * 10; 
             } else {
-                // Penalidade por peças do oponente (IA quer reduzir isso ao máximo)
                 score -= valorPeca;
                 const progressoOponente = (turnoIA === 1 ? r : (7 - r));
                 score -= progressoOponente * 10;
@@ -1421,10 +1412,6 @@ function minimax(mapa, profundidade, alpha, beta, maximizando, turnoAtual, turno
         for (const mv of mvs) {
             const copia = JSON.parse(JSON.stringify(mapa));
             aplicarMovimentoSimulado(copia, mv, turnoAtual);
-
-            // Se houve captura, o turno pode continuar sendo da mesma pessoa (combo)
-            // Para simplificar o Minimax e evitar travamentos, alternamos o turno,
-            // mas a lógica de captura obrigatória já cuida do peso das peças.
             const valor = minimax(
                 copia,
                 profundidade - 1,
