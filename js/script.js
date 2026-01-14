@@ -54,6 +54,7 @@ document.addEventListener('input', (e) => {
 
 
 
+
 //Fim do topo do arquivo
 
 // Monitor de nomes
@@ -198,7 +199,17 @@ onValue(vencedorRef, (snap) => {
     }
 });
 
+
+
+
+
+
+
+
+
+
 // --- VARIÁVEIS GLOBAIS ---
+let usuarioAutenticado = false;
 let ouvinteConviteAtivo = false;
 let jogoIniciado = false;
 let partidaConfirmada = false;
@@ -356,70 +367,73 @@ document.addEventListener('mousedown', (event) => {
 
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
-    const nomeInput = document.getElementById('modal-input-nome');
-    const nome = nomeInput ? nomeInput.value.trim() : "";
-    
-    // Validação Profissional: Não deixa escolher o modo sem o nome
-    if (nome.length < 3) {
-        const erro = document.getElementById('nome-error');
-        if (erro) erro.innerText = "Digite seu nome (mínimo 3 letras)";
-        nomeInput.style.borderColor = "#ff5f6d";
+    if (!usuarioAutenticado || !meuNome) {
+        alert("Por favor, faça Login ou Cadastro antes de selecionar o modo.");
+        const loginInput = document.getElementById('login-nome');
+        if (loginInput) loginInput.focus();
         return;
     }
 
-    // Limpa erros
-    const erroLabel = document.getElementById('nome-error');
-    if (erroLabel) erroLabel.innerText = "";
-    nomeInput.style.borderColor = "#333";
-
-    // Define o modo globalmente
     modoJogo = modo;
 
-    // Feedback visual nos cards
+    // 2. Feedback visual nos cards
     document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
     const cardAtivo = document.getElementById(`card-${modo}`);
-    if (cardAtivo) cardAtivo.classList.add('selected');
-
-    // --- ATIVAÇÃO DO MONITORAMENTO SE FOR ONLINE ---
-
-if (modo === 'online') {
-    console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
-
-    if (typeof iniciarMonitoramentoOnline === 'function') {
-        iniciarMonitoramentoOnline();
+    if (cardAtivo) {
+        cardAtivo.classList.add('selected');
     }
 
-    if (typeof iniciarMonitoramentoFotos === 'function') {
-        iniciarMonitoramentoFotos();
-    }
-    monitoresIniciados = true;
-}
+    // 3. Ativação do monitoramento se for Online
+    if (modo === 'online') {
+        console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
 
-    // Mostra a escolha de lados com animação
+        if (typeof iniciarMonitoramentoOnline === 'function') {
+            iniciarMonitoramentoOnline();
+        }
+
+        if (typeof iniciarMonitoramentoFotos === 'function') {
+            iniciarMonitoramentoFotos();
+        }
+        monitoresIniciados = true;
+    }
+
+    // 4. Mostra a escolha de lados (Vermelho/Preto)
     const sideSelection = document.getElementById('side-selection');
     if (sideSelection) {
         sideSelection.style.display = 'block';
         sideSelection.style.animation = 'fadeIn 0.5s ease';
+        
+        // Scroll suave para mostrar as opções de cores em telas pequenas
+        sideSelection.scrollIntoView({ behavior: 'smooth' });
     }
 };
 
-window.confirmarCadastro = (ladoEscolhido) => {
-    const nomeInput = document.getElementById('modal-input-nome');
-    // Pegamos o nome bruto para exibição e limpamos espaços
-    const nomeOriginal = nomeInput ? nomeInput.value.trim() : "";
-    
-    // FORMATANDO PARA O FIREBASE: Tudo em minúsculo para evitar erros de sincronização nas chaves
-    const nomeFormatado = nomeOriginal.toLowerCase();
 
-    if (nomeOriginal === "") {
-        alert("Por favor, digite seu nome!");
+// Assim que a página carrega, verifica se existe um nome salvo
+window.addEventListener('DOMContentLoaded', () => {
+    const nomeSalvo = localStorage.getItem('dama_user_remember');
+    if (nomeSalvo) {
+        document.getElementById('login-nome').value = nomeSalvo;
+        document.getElementById('checkbox-lembrar').checked = true;
+        
+        // fazer Login automático
+        
+        fazerLogin()
+    }
+});
+
+window.confirmarCadastro = (ladoEscolhido) => {
+    if (!usuarioAutenticado || !meuNome) {
+        alert("Por favor, faça login ou cadastre-se primeiro!");
         return;
     }
 
+    const nomeOriginal = meuNome;
+    const nomeFormatado = meuNome.toLowerCase();
+
     // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
     meuLado = ladoEscolhido;
-    meuNome = nomeFormatado; // Salvamos o formatado para lógica interna
-    mostrarMeuBotaoSair(); 
+    if (typeof mostrarMeuBotaoSair === 'function') mostrarMeuBotaoSair(); 
 
     // 2. INVERSÃO VISUAL DA INTERFACE
     if (meuLado === 'preto') {
@@ -433,15 +447,18 @@ window.confirmarCadastro = (ladoEscolhido) => {
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
+    // 4. LÓGICA PARA MODO ONLINE
     if (modoJogo === 'online') {
-        // --- REGISTRAR PRESENÇA ONLINE ---
-        // A chave no banco será sempre minúscula para facilitar a busca do oponente
+        // REGISTRAR PRESENÇA NO LOBBY (usuarios_online)
+        // Usamos o nome formatado (minúsculo) como chave para evitar duplicatas por erro de digitação
         const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
-        set(minhaPresencaRef, { online: true, nome: nomeOriginal });
+        set(minhaPresencaRef, { 
+            online: true, 
+            nome: nomeOriginal,
+            lastChanged: Date.now()
+        });
 
-        // 4. SALVAMENTO NO FIREBASE (DADOS DA PARTIDA)
-        // ✅ CORREÇÃO CRÍTICA: Salvamos como 'vermelho' ou 'preto' por extenso 
-        // para que o iniciarMonitoramentoOnline consiga ler corretamente.
+        // SALVAMENTO DOS DADOS DA PARTIDA ESPECÍFICA
         const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
         const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
         const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
@@ -449,7 +466,8 @@ window.confirmarCadastro = (ladoEscolhido) => {
         set(playerStatusRef, true);
         set(playerNameRef, nomeOriginal);
         
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO
+        // 5. CONFIGURAÇÃO DE DESCONEXÃO (onDisconnect)
+        // Se o jogador fechar a aba ou cair a net, o Firebase limpa os dados automaticamente
         import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
             pkg.onDisconnect(playerStatusRef).remove();
             pkg.onDisconnect(playerNameRef).remove();
@@ -457,6 +475,7 @@ window.confirmarCadastro = (ladoEscolhido) => {
             pkg.onDisconnect(minhaPresencaRef).remove();
         });
 
+        // Garante que o tabuleiro esteja sincronizado ao entrar
         onValue(gameRef, (snap) => {
             if (!snap.exists()) reiniciar();
         }, { onlyOnce: true });
@@ -466,26 +485,128 @@ window.confirmarCadastro = (ladoEscolhido) => {
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
+        
+        // No modo IA, resetamos o tabuleiro localmente para começar do zero
         reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL
+    // 7. FINALIZAÇÃO VISUAL E FECHAMENTO DOS MODAIS
     const modal = document.getElementById('modal-cadastro');
     if (modal) modal.style.display = 'none';
     
     const selecaoLado = document.getElementById('side-selection');
     if (selecaoLado) selecaoLado.style.display = 'none';
 
+    // Redesenha o tabuleiro para garantir que as peças apareçam na posição correta
     desenhar();
 
+    // 8. DISPARO DA JOGADA INICIAL DA IA
     if (modoJogo === 'ia') {
+        // Se o turno inicial pertencer à cor que a IA está controlando
         const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
         if (turno === idTurnoIA) {
-            setTimeout(() => {
-                if (typeof jogadaDaIA === 'function') jogadaDaIA();
+            setTimeout(() => { 
+                if (typeof jogadaDaIA === 'function') jogadaDaIA(); 
             }, 1000); 
         }
     }
+};
+
+// janelas
+
+window.alternarAuth = function(tipo) {
+    const sLogin = document.getElementById('secao-login');
+    const sCadastro = document.getElementById('secao-cadastro');
+    const tLogin = document.getElementById('tab-login');
+    const tCadastro = document.getElementById('tab-cadastro');
+
+    if (tipo === 'login') {
+        sLogin.style.display = 'block'; sCadastro.style.display = 'none';
+        tLogin.classList.add('active'); tCadastro.classList.remove('active');
+    } else {
+        sLogin.style.display = 'none'; sCadastro.style.display = 'block';
+        tLogin.classList.remove('active'); tCadastro.classList.add('active');
+    }
+};
+
+
+window.fazerCadastro = function() {
+    const nome = document.getElementById('cadastro-nome').value.trim();
+    if (nome.length < 3) return alert("Nome muito curto!");
+
+    const id = nome.toLowerCase();
+    const userRef = ref(db, `usuarios_registrados/${id}`);
+
+    onValue(userRef, (snapshot) => {
+        if (snapshot.exists()) {
+            alert("Este nome já existe! Tente o Login.");
+        } else {
+            set(userRef, { nomeExibicao: nome, criadoEm: Date.now() }).then(() => {
+                alert("Cadastro realizado! Vá para a aba 'Entrar'.");
+                alternarAuth('login');
+            });
+        }
+    }, { onlyOnce: true });
+};
+
+window.fazerLogin = function() {
+    const campoInput = document.getElementById('login-nome');
+    const nomeInput = campoInput.value.trim();
+    
+    // Captura se o checkbox de "Lembrar-me" está marcado
+    const checkboxLembrar = document.getElementById('checkbox-lembrar');
+    const deveLembrar = checkboxLembrar ? checkboxLembrar.checked : false;
+
+    if (!nomeInput) {
+        alert("Por favor, digite seu nome de usuário!");
+        campoInput.focus();
+        return;
+    }
+
+    const id = nomeInput.toLowerCase();
+    
+    // Consulta ao Firebase para verificar se o usuário existe
+    onValue(ref(db, `usuarios_registrados/${id}`), (snapshot) => {
+        if (snapshot.exists()) {
+            // 1. Define os dados globais do usuário logado
+            meuNome = snapshot.val().nomeExibicao;
+            usuarioAutenticado = true;
+
+            // 2. Lógica do "Lembrar-me" (LocalStorage)
+            if (deveLembrar) {
+                localStorage.setItem('dama_user_remember', meuNome);
+            } else {
+                localStorage.removeItem('dama_user_remember');
+            }
+
+            // 3. Transição de Interface
+            // Esconde formulário e abas de login
+            document.getElementById('secao-login').style.display = 'none';
+            const authTabs = document.querySelector('.auth-tabs');
+            if (authTabs) authTabs.style.display = 'none';
+
+            // Mostra a área do lobby e seleção de modo
+            const posLoginArea = document.getElementById('pos-login-area');
+            if (posLoginArea) {
+                posLoginArea.style.display = 'block';
+                posLoginArea.style.animation = 'fadeIn 0.5s ease';
+            }
+
+            // 4. Ativa as funções de rede
+            tornarOnline();
+            iniciarEscutaDeConvites();
+
+            // 5. Sincroniza o nome com os inputs ocultos de jogo
+            if (document.getElementById('input-nome-v')) document.getElementById('input-nome-v').value = meuNome;
+            if (document.getElementById('input-nome-p')) document.getElementById('input-nome-p').value = meuNome;
+
+            console.log("Login bem-sucedido:", meuNome);
+            alert(`Bem-vindo de volta, ${meuNome}!`);
+            
+        } else {
+            alert("Usuário não encontrado! Verifique o nome ou cadastre-se na aba ao lado.");
+        }
+    }, { onlyOnce: true });
 };
 
 function mostrarMeuBotaoSair() {
@@ -729,61 +850,6 @@ window.registrarPresenca = (nome) => {
     });
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//implementação nova
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function tornarOnline() {
     if (!meuNome || meuNome.trim().length < 3) return;
     
@@ -799,14 +865,6 @@ function tornarOnline() {
     // Avisa o Firebase para remover quando o usuário sair
     onDisconnect(minhaPresencaRef).remove();
 }
-
-
-
-
-
-
-
-    
 
 // --- 3. FUNÇÃO PARA CONVIDAR (Botão Lateral) ---
 window.desafiarJogador = function(nomeOponente) {
@@ -843,7 +901,6 @@ window.desafiarJogador = function(nomeOponente) {
     }
 };
 
-
 // --- 4. ATUALIZAÇÃO DA LISTA LATERAL EM TEMPO REAL ---
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
@@ -872,32 +929,6 @@ onValue(listaJogadoresRef, (snapshot) => {
         listaUl.appendChild(li);
     }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
 function iniciarEscutaDeConvites() {
@@ -940,30 +971,6 @@ function iniciarEscutaDeConvites() {
         }
     });
 }
-
-
-
-
-
-// fim da implementação nova
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
