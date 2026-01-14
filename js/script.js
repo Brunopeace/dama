@@ -32,9 +32,7 @@ const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores');
 const convitesRef = ref(db, 'partida_unica/convites');
-const listaJogadoresRef = ref(db, 'jogadores_online');
-
-// --- 2. FUNÇÃO TORNAR ONLINE (Agora com onDisconnect correto) ---
+const listaJogadoresRef = ref(db, 'usuarios_online'); 
 
 
 // --- 3. ATIVAÇÃO AO DIGITAR ---
@@ -47,6 +45,12 @@ document.addEventListener('input', (e) => {
         }
     }
 });
+
+
+
+
+
+
 
 
 //Fim do topo do arquivo
@@ -783,7 +787,7 @@ function tornarOnline() {
     if (!meuNome || meuNome.trim().length < 3) return;
     
     const meuId = meuNome.trim().toLowerCase();
-    const minhaPresencaRef = ref(db, `jogadores_online/${meuId}`);
+    const minhaPresencaRef = ref(db, `usuarios_online/${meuId}`);
     
     set(minhaPresencaRef, {
         nomeExibicao: meuNome,
@@ -794,11 +798,6 @@ function tornarOnline() {
     // Avisa o Firebase para remover quando o usuário sair
     onDisconnect(minhaPresencaRef).remove();
 }
-
-
-
-
-
 
 
 
@@ -835,35 +834,57 @@ window.desafiarJogador = function(nomeOponente) {
 // --- 4. ATUALIZAÇÃO DA LISTA LATERAL EM TEMPO REAL ---
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
-    
-    // Se você tiver a função de atualizar bolinhas no placar, ela roda aqui
-    if (typeof atualizarBolinhasStatus === 'function') {
-        atualizarBolinhasStatus(jogadoresOnline);
-    }
-
     const listaUl = document.getElementById('lista-jogadores');
-    if (listaUl) {
-        listaUl.innerHTML = ""; 
-        const meuIdRef = meuNome ? meuNome.trim().toLowerCase() : "";
+    if (!listaUl) return;
 
-        for (let chave in jogadoresOnline) {
-            // Não mostrar eu mesmo na lista
-            if (chave === meuIdRef) continue; 
-            
-            const dados = jogadoresOnline[chave];
-            const li = document.createElement('li');
-            li.className = 'jogador-item';
-            li.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="status-dot online"></span>
-                    <span>${dados.nomeExibicao || chave}</span>
-                </div>
-                <button class="btn-desafiar" onclick="desafiarJogador('${dados.nomeExibicao || chave}')">CONVIDAR</button>
-            `;
-            listaUl.appendChild(li);
-        }
+    listaUl.innerHTML = ""; 
+    const meuIdRef = meuNome ? meuNome.trim().toLowerCase() : "";
+
+    for (let chave in jogadoresOnline) {
+        if (chave === meuIdRef) continue; 
+        
+        const dados = jogadoresOnline[chave];
+        // Pega o nomeExibicao ou usa a própria chave (bruno, lucas) como fallback
+        const nomeParaMostrar = dados.nomeExibicao || chave;
+
+        const li = document.createElement('li');
+        li.className = 'jogador-item';
+        li.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="status-dot online"></span>
+                <span>${nomeParaMostrar}</span>
+            </div>
+            <button class="btn-desafiar" onclick="desafiarJogador('${nomeParaMostrar}')">CONVIDAR</button>
+        `;
+        listaUl.appendChild(li);
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
 function iniciarEscutaDeConvites() {
