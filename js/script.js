@@ -38,14 +38,15 @@ const listaJogadoresRef = ref(db, 'usuarios_online');
 // --- 3. ATIVAÇÃO AO DIGITAR ---
 document.addEventListener('input', (e) => {
     if (e.target.id === 'input-nome-v' || e.target.id === 'input-nome-p') {
-        meuNome = e.target.value;
-        if (meuNome.trim().length >= 3) {
+        // Força a atualização da variável GLOBAL
+        meuNome = e.target.value.trim(); 
+        
+        if (meuNome.length >= 3) {
             tornarOnline(); 
             iniciarEscutaDeConvites(); 
         }
     }
 });
-
 
 
 
@@ -809,17 +810,28 @@ function tornarOnline() {
 
 // --- 3. FUNÇÃO PARA CONVIDAR (Botão Lateral) ---
 window.desafiarJogador = function(nomeOponente) {
-    if (!meuNome || meuNome.trim() === "") {
-        alert("Por favor, digite seu nome no campo de texto antes de convidar!");
+    // Tenta capturar o nome do HTML se a variável global falhar
+    if (!meuNome || meuNome === "") {
+        const campoV = document.getElementById('input-nome-v');
+        const campoP = document.getElementById('input-nome-p');
+        meuNome = (campoV?.value || campoP?.value || "").trim();
+    }
+
+    if (!meuNome || meuNome.length < 3) {
+        alert("Por favor, digite seu nome (mínimo 3 letras) antes de convidar!");
         return;
     }
     
     const idOponente = nomeOponente.trim().toLowerCase();
     const idMeu = meuNome.trim().toLowerCase();
 
-    if (idOponente === idMeu) return alert("Você não pode convidar a si mesmo!");
+    if (idOponente === idMeu) {
+        alert("Você não pode convidar a si mesmo!");
+        return;
+    }
 
     if (confirm(`Deseja enviar um convite para ${nomeOponente}?`)) {
+        // Envia para 'usuarios_online' conforme vimos no seu Firebase
         set(ref(db, `partida_unica/convites/${idOponente}`), {
             de: meuNome,
             idDe: idMeu,
@@ -830,6 +842,7 @@ window.desafiarJogador = function(nomeOponente) {
         });
     }
 };
+
 
 // --- 4. ATUALIZAÇÃO DA LISTA LATERAL EM TEMPO REAL ---
 onValue(listaJogadoresRef, (snapshot) => {
