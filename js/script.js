@@ -702,6 +702,26 @@ window.registrarPresenca = (nome) => {
     });
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //implementação nova
 
 // Função para convidar um jogador da lista lateral
@@ -753,29 +773,52 @@ onValue(listaJogadoresRef, (snapshot) => {
 
 
 // Escutar convites direcionados a MIM
+
 const meuIdRef = meuNome.trim().toLowerCase();
+
 onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
     const convite = snapshot.val();
     
     if (convite && convite.status === 'pendente') {
-        const aceitou = confirm(`${convite.de} está te desafiando! Aceitar?`);
-        
-        if (aceitou) {
-            // 1. Atualiza o convite para aceito
+        // 1. Caso você receba um convite
+        if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
+            
+            // Define o modo de jogo como online e sua cor como PRETO (quem aceita geralmente é o preto)
+            modoJogo = 'online';
+            meuLado = 'preto';
+            
+            // Atualiza o status no Firebase para "aceito"
             update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
             
-            // 2. Limpa o tabuleiro para começar a partida
-            reiniciarJogoOnline(); // Chame sua função que reseta o board
+            // Reseta o tabuleiro e sincroniza o banco de dados
+            window.reiniciar();
             
-            alert("Partida iniciada!");
+            // Registra sua entrada como jogador preto no banco
+            set(ref(db, 'partida_unica/jogadores/preto'), true);
+            set(ref(db, 'partida_unica/nomes/preto'), meuNome);
+
+            alert("Desafio aceito! Você é o jogador PRETO (as peças de cima).");
+            
         } else {
-            // Se recusar, removemos o convite
+            // Se recusar, remove o convite do banco de dados
             remove(ref(db, `partida_unica/convites/${meuIdRef}`));
         }
+
     } else if (convite && convite.status === 'aceito') {
-        // Isso aqui é para quem ENVIOU o convite saber que o outro aceitou
-        alert("O oponente aceitou o desafio! Começando...");
+        // 2. Caso VOCÊ tenha enviado o convite e o oponente aceitou
+        alert(`${convite.de} aceitou seu desafio!`);
+        
+        modoJogo = 'online';
+        meuLado = 'vermelho'; // Quem convida fica como vermelho
+
+        // Registra sua entrada como jogador vermelho no banco
+        set(ref(db, 'partida_unica/jogadores/vermelho'), true);
+        set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
+
+        // Limpa o registro do convite pois a partida já vai começar
         remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        
+        console.log("Partida iniciada como Vermelho.");
     }
 });
 
@@ -857,6 +900,8 @@ window.encerrarPartida = function() {
 // 🟢 função reiniciar
  
 window.reiniciar = () => {
+    console.log("Reiniciando jogo...");
+
     // 1. Restaurar o Tabuleiro (Mapa inicial)
     mapa = [
         [0, 2, 0, 2, 0, 2, 0, 2], 
@@ -869,51 +914,51 @@ window.reiniciar = () => {
         [1, 0, 1, 0, 1, 0, 1, 0]
     ];
 
-    // 2. Resetar variáveis de estado
+    // 2. Resetar variáveis de estado locais
     turno = 1; 
     capturasV = 0; 
     capturasP = 0; 
     selecionada = null;
     jogoIniciado = true;
 
-    // 3. Esconder Modais (Vitória e Derrota Profissional)
-    const telaVitoria = document.getElementById('tela-vitoria');
-    if (telaVitoria) {
-        telaVitoria.classList.remove('ativo');
-        telaVitoria.style.display = 'none'; 
-    }
-    
-    const telaDerrota = document.getElementById('tela-derrota');
-    if (telaDerrota) {
-        telaDerrota.classList.remove('ativo');
-        telaDerrota.style.display = 'none';
-    }
+    // 3. Esconder Modais de Fim de Jogo
+    const modais = ['tela-vitoria', 'tela-derrota'];
+    modais.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('ativo');
+            el.style.display = 'none'; 
+        }
+    });
 
-    // 4. Atualizar a Interface do Usuário
+    // 4. Atualizar a Interface Local
     desenhar();
     if (typeof atualizarUI === 'function') atualizarUI();
     if (typeof atualizarDestaqueTurno === 'function') atualizarDestaqueTurno();
 
     // 5. Sincronizar Firebase (Modo Online)
     if (modoJogo === 'online') {
-        // Apenas o jogador Vermelho (geralmente o mestre/criador) limpa os dados globais
-        if (meuLado === 'vermelho') {
-            // Remove o vencedor do banco para liberar a tela do oponente
-            const vencedorRef = ref(db, 'partida_unica/vencedor');
-            remove(vencedorRef);
+        // Importante: No sistema de convites, quem reseta o banco é quem "inicia" a ação
+        // Para evitar conflitos, limpamos os dados de fim de jogo
+        const updates = {};
+        updates['partida_unica/tabuleiro'] = mapa;
+        updates['partida_unica/turno'] = 1;
+        updates['partida_unica/vencedor'] = null; // Libera a tela do oponente
+        updates['partida_unica/capturasV'] = 0;
+        updates['partida_unica/capturasP'] = 0;
 
-            // Reseta o mapa e o turno para o oponente ver a mudança
-            if (typeof window.salvarNoFirebase === 'function') {
-                window.salvarNoFirebase(1); 
-            }
-        }
+        update(ref(db), updates)
+            .then(() => console.log("Firebase sincronizado: Nova partida pronta."))
+            .catch(err => console.error("Erro ao sincronizar reinício:", err));
+            
+        // Limpa convites antigos se houver
+        const meuIdRef = meuNome.trim().toLowerCase();
+        remove(ref(db, `partida_unica/convites/${meuIdRef}`));
     }
     
     // 6. Lógica de Início para IA
     if (modoJogo === 'ia') {
         const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
-        
-        // Se a IA for o turno 1 (Preto), ela já começa jogando
         if (turno === turnoIA) {
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
@@ -970,19 +1015,7 @@ function atualizarDestaqueTurno() {
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-// ✅ emojis 👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀👀
-
+// ✅ emojis
 function exibirEmojiNaTela(emoji, lado) {
     const el = document.createElement('div');
     el.className = 'float-emoji';
