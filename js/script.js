@@ -1,3 +1,5 @@
+// Topo do arquivo
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { 
     getDatabase, 
@@ -5,7 +7,8 @@ import {
     set, 
     onValue, 
     update,
-    remove
+    remove,
+    onDisconnect // <-- O onDisconnect entra aqui, de forma simples
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
 // --- CONFIGURAÇÃO FIREBASE ---
@@ -20,28 +23,33 @@ const firebaseConfig = {
 };
 
 // Inicialização
-
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-let meuNome = "";
-// 1. PRIMEIRO: Definir todas as referências (o endereço dos dados)
+
+// 1. Definição das Referências
 const gameRef = ref(db, 'partida_unica');
 const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
-const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
+const playersRef = ref(db, 'partida_unica/jogadores');
 const convitesRef = ref(db, 'partida_unica/convites');
-// Use este bloco:
-document.addEventListener('input', (e) => { // Troquei 'change' por 'input' para ser instantâneo
+const listaJogadoresRef = ref(db, 'jogadores_online');
+
+// --- 2. FUNÇÃO TORNAR ONLINE (Agora com onDisconnect correto) ---
+
+
+// --- 3. ATIVAÇÃO AO DIGITAR ---
+document.addEventListener('input', (e) => {
     if (e.target.id === 'input-nome-v' || e.target.id === 'input-nome-p') {
         meuNome = e.target.value;
-        
-        // Só registra se o nome tiver um tamanho mínimo (evita nomes vazios na lista)
         if (meuNome.trim().length >= 3) {
             tornarOnline(); 
             iniciarEscutaDeConvites(); 
         }
     }
 });
+
+
+//Fim do topo do arquivo
 
 // Monitor de nomes
 onValue(nomesRef, (snap) => {
@@ -195,6 +203,7 @@ let jogadoresAntigos = {};
 let nomesAnteriores = {};
 let modoJogo = 'online'; 
 let meuLado = new URLSearchParams(window.location.search).get('lado'); 
+let meuNome = "";
 let mapa = [];
 let turno = 1; 
 let capturasV = 0;
@@ -657,7 +666,7 @@ function iniciarMonitoramentoOnline() {
 
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
-const listaJogadoresRef = ref(db, 'jogadores_online');
+
 
 // Função central de atualização de bolinhas
 const atualizarBolinhasStatus = (jogadoresOnline) => {
@@ -715,20 +724,103 @@ window.registrarPresenca = (nome) => {
     });
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //implementação nova
 
-// Função para convidar um jogador da lista lateral
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function tornarOnline() {
+    if (!meuNome || meuNome.trim().length < 3) return;
+    
+    const meuId = meuNome.trim().toLowerCase();
+    const minhaPresencaRef = ref(db, `jogadores_online/${meuId}`);
+    
+    set(minhaPresencaRef, {
+        nomeExibicao: meuNome,
+        status: "online",
+        lastChanged: Date.now()
+    });
+
+    // Avisa o Firebase para remover quando o usuário sair
+    onDisconnect(minhaPresencaRef).remove();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+// --- 3. FUNÇÃO PARA CONVIDAR (Botão Lateral) ---
 window.desafiarJogador = function(nomeOponente) {
     if (!meuNome || meuNome.trim() === "") {
-        alert("Por favor, digite seu nome no campo indicado antes de convidar!");
+        alert("Por favor, digite seu nome no campo de texto antes de convidar!");
         return;
     }
     
     const idOponente = nomeOponente.trim().toLowerCase();
     const idMeu = meuNome.trim().toLowerCase();
 
+    if (idOponente === idMeu) return alert("Você não pode convidar a si mesmo!");
+
     if (confirm(`Deseja enviar um convite para ${nomeOponente}?`)) {
-        // Cria um convite no Firebase para o oponente
         set(ref(db, `partida_unica/convites/${idOponente}`), {
             de: meuNome,
             idDe: idMeu,
@@ -740,20 +832,27 @@ window.desafiarJogador = function(nomeOponente) {
     }
 };
 
+// --- 4. ATUALIZAÇÃO DA LISTA LATERAL EM TEMPO REAL ---
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
-    atualizarBolinhasStatus(jogadoresOnline);
+    
+    // Se você tiver a função de atualizar bolinhas no placar, ela roda aqui
+    if (typeof atualizarBolinhasStatus === 'function') {
+        atualizarBolinhasStatus(jogadoresOnline);
+    }
 
     const listaUl = document.getElementById('lista-jogadores');
     if (listaUl) {
         listaUl.innerHTML = ""; 
-        const meuNomeRef = meuNome ? meuNome.trim().toLowerCase() : "";
+        const meuIdRef = meuNome ? meuNome.trim().toLowerCase() : "";
+
         for (let chave in jogadoresOnline) {
-            if (chave === meuNomeRef) continue; 
+            // Não mostrar eu mesmo na lista
+            if (chave === meuIdRef) continue; 
+            
             const dados = jogadoresOnline[chave];
             const li = document.createElement('li');
             li.className = 'jogador-item';
-            // O onclick abaixo agora funcionará porque definimos window.desafiarJogador
             li.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="status-dot online"></span>
@@ -766,79 +865,51 @@ onValue(listaJogadoresRef, (snapshot) => {
     }
 });
 
+// --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
 function iniciarEscutaDeConvites() {
-    // Só inicia se tiver um nome e se o ouvinte ainda não estiver rodando
     if (!meuNome || ouvinteConviteAtivo) return;
     
     ouvinteConviteAtivo = true;
     const meuIdRef = meuNome.trim().toLowerCase();
 
-    console.log("Escutando convites para:", meuIdRef);
-
     onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
         const convite = snapshot.val();
-        
         if (!convite) return;
 
         if (convite.status === 'pendente') {
-            // 1. CASO VOCÊ RECEBA UM CONVITE
+            // VOCÊ RECEBEU UM CONVITE
             if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
-                
-                // Configurações locais
                 modoJogo = 'online';
-                meuLado = 'preto'; // Quem aceita fica com as pretas
+                meuLado = 'preto'; // Convidado joga com as pretas
                 
-                // Sincroniza o aceite no Firebase
                 update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
                 
-                // Reseta o tabuleiro para ambos
-                window.reiniciar();
+                window.reiniciar(); // Reseta o tabuleiro para ambos
                 
-                // Ocupa a vaga de jogador preto no banco
                 set(ref(db, 'partida_unica/jogadores/preto'), true);
                 set(ref(db, 'partida_unica/nomes/preto'), meuNome);
-
-                alert("Desafio aceito! Você jogará com as pretas.");
-                
             } else {
-                // Se recusar, remove o convite para não aparecer de novo
                 remove(ref(db, `partida_unica/convites/${meuIdRef}`));
             }
 
         } else if (convite.status === 'aceito') {
-            // 2. CASO O OPONENTE ACEITE O CONVITE QUE VOCÊ ENVIOU
+            // SEU CONVITE FOI ACEITO
             alert(`${convite.de} aceitou seu desafio!`);
             
             modoJogo = 'online';
-            meuLado = 'vermelho'; // Quem enviou o convite fica com as vermelhas
+            meuLado = 'vermelho'; // Desafiador joga com as vermelhas
 
-            // Ocupa a vaga de jogador vermelho no banco
             set(ref(db, 'partida_unica/jogadores/vermelho'), true);
             set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
 
-            // Limpa o registro do convite para finalizar o ciclo
             remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-            
-            console.log("Iniciando como Vermelho.");
         }
     });
 }
 
-function tornarOnline() {
-    if (!meuNome) return;
-    const meuId = meuNome.trim().toLowerCase();
-    const minhaPresencaRef = ref(db, `jogadores_online/${meuId}`);
-    
-    // Salva na lista global de quem está no site agora
-    set(minhaPresencaRef, {
-        nomeExibicao: meuNome,
-        status: "online",
-        lastChanged: Date.now()
-    });
 
-    // Remove da lista se o jogador fechar a aba
-    onDisconnect(minhaPresencaRef).remove();
-}
+
+
 
 // fim da implementação nova
 
