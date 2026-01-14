@@ -714,7 +714,10 @@ window.registrarPresenca = (nome) => {
 
 // Função para convidar um jogador da lista lateral
 window.desafiarJogador = function(nomeOponente) {
-    if (!meuNome) return alert("Defina seu nome antes de convidar!");
+    if (!meuNome || meuNome.trim() === "") {
+        alert("Por favor, digite seu nome no campo indicado antes de convidar!");
+        return;
+    }
     
     const idOponente = nomeOponente.trim().toLowerCase();
     const idMeu = meuNome.trim().toLowerCase();
@@ -731,7 +734,6 @@ window.desafiarJogador = function(nomeOponente) {
         });
     }
 };
-
 
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
