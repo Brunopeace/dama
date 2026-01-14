@@ -30,14 +30,18 @@ const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores'); // Criado antes de usar!
 const convitesRef = ref(db, 'partida_unica/convites');
-const inputNome = document.getElementById('input-nome'); // Ajuste para o ID do seu campo de texto
-if (inputNome) {
-    inputNome.addEventListener('change', (e) => {
+// Use este bloco:
+document.addEventListener('input', (e) => { // Troquei 'change' por 'input' para ser instantâneo
+    if (e.target.id === 'input-nome-v' || e.target.id === 'input-nome-p') {
         meuNome = e.target.value;
-        // Ao definir o nome, já podemos nos registrar como online
-        tornarOnline(); 
-    });
-}
+        
+        // Só registra se o nome tiver um tamanho mínimo (evita nomes vazios na lista)
+        if (meuNome.trim().length >= 3) {
+            tornarOnline(); 
+            iniciarEscutaDeConvites(); 
+        }
+    }
+});
 
 // Monitor de nomes
 onValue(nomesRef, (snap) => {
@@ -819,18 +823,6 @@ function iniciarEscutaDeConvites() {
         }
     });
 }
-
-
-// Detecta quando o nome é preenchido nos inputs e ativa o sistema
-document.addEventListener('change', (e) => {
-    if (e.target.id === 'input-nome-v' || e.target.id === 'input-nome-p') {
-        meuNome = e.target.value;
-        if (meuNome.trim().length >= 3) {
-            tornarOnline(); // Aquela função que te coloca na lista lateral
-            iniciarEscutaDeConvites(); // Ativa o "radar" de convites
-        }
-    }
-});
 
 function tornarOnline() {
     if (!meuNome) return;
