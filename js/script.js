@@ -182,6 +182,7 @@ onValue(vencedorRef, (snap) => {
 });
 
 // --- VARIÁVEIS GLOBAIS ---
+let ouvinteConviteAtivo = false;
 let jogoIniciado = false;
 let partidaConfirmada = false;
 let monitoresIniciados = false;
@@ -652,7 +653,7 @@ function iniciarMonitoramentoOnline() {
 
 // --- CONFIGURAÇÃO DE PRESENÇA E STATUS ONLINE ---
 
-const listaJogadoresRef = ref(db, 'usuarios_online');
+const listaJogadoresRef = ref(db, 'jogadores_online');
 
 // Função central de atualização de bolinhas
 const atualizarBolinhasStatus = (jogadoresOnline) => {
@@ -761,54 +762,73 @@ onValue(listaJogadoresRef, (snapshot) => {
     }
 });
 
-
-// Escutar convites direcionados a MIM
-
-const meuIdRef = meuNome.trim().toLowerCase();
-
-onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
-    const convite = snapshot.val();
+function iniciarEscutaDeConvites() {
+    // Só inicia se tiver um nome e se o ouvinte ainda não estiver rodando
+    if (!meuNome || ouvinteConviteAtivo) return;
     
-    if (convite && convite.status === 'pendente') {
-        // 1. Caso você receba um convite
-        if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
+    ouvinteConviteAtivo = true;
+    const meuIdRef = meuNome.trim().toLowerCase();
+
+    console.log("Escutando convites para:", meuIdRef);
+
+    onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
+        const convite = snapshot.val();
+        
+        if (!convite) return;
+
+        if (convite.status === 'pendente') {
+            // 1. CASO VOCÊ RECEBA UM CONVITE
+            if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
+                
+                // Configurações locais
+                modoJogo = 'online';
+                meuLado = 'preto'; // Quem aceita fica com as pretas
+                
+                // Sincroniza o aceite no Firebase
+                update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
+                
+                // Reseta o tabuleiro para ambos
+                window.reiniciar();
+                
+                // Ocupa a vaga de jogador preto no banco
+                set(ref(db, 'partida_unica/jogadores/preto'), true);
+                set(ref(db, 'partida_unica/nomes/preto'), meuNome);
+
+                alert("Desafio aceito! Você jogará com as pretas.");
+                
+            } else {
+                // Se recusar, remove o convite para não aparecer de novo
+                remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+            }
+
+        } else if (convite.status === 'aceito') {
+            // 2. CASO O OPONENTE ACEITE O CONVITE QUE VOCÊ ENVIOU
+            alert(`${convite.de} aceitou seu desafio!`);
             
-            // Define o modo de jogo como online e sua cor como PRETO (quem aceita geralmente é o preto)
             modoJogo = 'online';
-            meuLado = 'preto';
-            
-            // Atualiza o status no Firebase para "aceito"
-            update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
-            
-            // Reseta o tabuleiro e sincroniza o banco de dados
-            window.reiniciar();
-            
-            // Registra sua entrada como jogador preto no banco
-            set(ref(db, 'partida_unica/jogadores/preto'), true);
-            set(ref(db, 'partida_unica/nomes/preto'), meuNome);
+            meuLado = 'vermelho'; // Quem enviou o convite fica com as vermelhas
 
-            alert("Desafio aceito! Você é o jogador PRETO (as peças de cima).");
-            
-        } else {
-            // Se recusar, remove o convite do banco de dados
+            // Ocupa a vaga de jogador vermelho no banco
+            set(ref(db, 'partida_unica/jogadores/vermelho'), true);
+            set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
+
+            // Limpa o registro do convite para finalizar o ciclo
             remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+            
+            console.log("Iniciando como Vermelho.");
         }
+    });
+}
 
-    } else if (convite && convite.status === 'aceito') {
-        // 2. Caso VOCÊ tenha enviado o convite e o oponente aceitou
-        alert(`${convite.de} aceitou seu desafio!`);
-        
-        modoJogo = 'online';
-        meuLado = 'vermelho'; // Quem convida fica como vermelho
 
-        // Registra sua entrada como jogador vermelho no banco
-        set(ref(db, 'partida_unica/jogadores/vermelho'), true);
-        set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
-
-        // Limpa o registro do convite pois a partida já vai começar
-        remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-        
-        console.log("Partida iniciada como Vermelho.");
+// Detecta quando o nome é preenchido nos inputs e ativa o sistema
+document.addEventListener('change', (e) => {
+    if (e.target.id === 'input-nome-v' || e.target.id === 'input-nome-p') {
+        meuNome = e.target.value;
+        if (meuNome.trim().length >= 3) {
+            tornarOnline(); // Aquela função que te coloca na lista lateral
+            iniciarEscutaDeConvites(); // Ativa o "radar" de convites
+        }
     }
 });
 
@@ -829,6 +849,24 @@ function tornarOnline() {
 }
 
 // fim da implementação nova
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
