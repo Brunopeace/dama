@@ -400,16 +400,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-
-
-
-
-
-
-
-
-
-//
 window.confirmarCadastro = async (ladoEscolhido) => {
     // 1. Validação de Segurança
     if (!usuarioAutenticado || !meuNome) {
@@ -519,26 +509,6 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         }
     }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // janelas
 
@@ -931,6 +901,141 @@ window.desafiarJogador = function(nomeOponente) {
     }
 };
 
+// --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
+function iniciarEscutaDeConvites() {
+    if (!meuNome || ouvinteConviteAtivo) return;
+    
+    ouvinteConviteAtivo = true;
+    const meuIdRef = meuNome.trim().toLowerCase();
+
+    onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
+        const convite = snapshot.val();
+        if (!convite) return;
+
+        if (convite.status === 'pendente') {
+            // --- VOCÊ RECEBEU UM CONVITE ---
+            if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
+                modoJogo = 'online';
+                meuLado = 'preto'; // Convidado joga com as pretas
+
+                // 1. Atualiza status no banco
+                update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
+                
+                // 2. Registra presença no jogo
+                set(ref(db, 'partida_unica/jogadores/preto'), true);
+                set(ref(db, 'partida_unica/nomes/preto'), meuNome);
+
+                // 3. VAI DIRETO PARA O TABULEIRO
+                entrarNoJogoDireto();
+                
+                // 4. Reseta o tabuleiro (Sincronizado)
+                window.reiniciar(); 
+            } else {
+                remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+            }
+
+        } else if (convite.status === 'aceito') {
+            // --- SEU CONVITE FOI ACEITO ---
+            alert(`${convite.de} aceitou seu desafio!`);
+            
+            modoJogo = 'online';
+            meuLado = 'vermelho'; // Desafiador joga com as vermelhas
+
+            // 1. Registra presença
+            set(ref(db, 'partida_unica/jogadores/vermelho'), true);
+            set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
+
+            // 2. VAI DIRETO PARA O TABULEIRO
+            entrarNoJogoDireto();
+
+            // 3. Limpa o convite
+            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        }
+    });
+}
+
+// Função auxiliar para transição imediata
+function iniciarEscutaDeConvites() {
+    if (!meuNome || ouvinteConviteAtivo) return;
+    
+    ouvinteConviteAtivo = true;
+    const meuIdRef = meuNome.trim().toLowerCase();
+
+    onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
+        const convite = snapshot.val();
+        if (!convite) return;
+
+        if (convite.status === 'pendente') {
+            // --- VOCÊ RECEBEU UM CONVITE ---
+            if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
+                modoJogo = 'online';
+                meuLado = 'preto'; // Quem aceita joga com as pretas
+
+                // 1. Atualiza status no banco e registra presença
+                update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
+                set(ref(db, 'partida_unica/jogadores/preto'), true);
+                set(ref(db, 'partida_unica/nomes/preto'), meuNome);
+                
+                // 2. Transição visual e início do jogo
+                irParaOTabuleiro();
+                window.reiniciar(); // Reseta o tabuleiro para o estado inicial
+                
+            } else {
+                remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+            }
+
+        } else if (convite.status === 'aceito') {
+            // --- SEU CONVITE FOI ACEITO ---
+            alert(`${convite.de} aceitou seu desafio!`);
+            
+            modoJogo = 'online';
+            meuLado = 'vermelho'; // Quem convidou joga com as vermelhas
+
+            // 1. Registra presença
+            set(ref(db, 'partida_unica/jogadores/vermelho'), true);
+            set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
+
+            // 2. Transição visual direta
+            irParaOTabuleiro();
+
+            // 3. Limpa o convite para não repetir o alerta
+            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        }
+    });
+}
+
+    // Função Auxiliar: Fecha modais e prepara a tela do tabuleiro
+ 
+function irParaOTabuleiro() {
+    // 1. Fecha o modal de cadastro/seleção
+    const modal = document.getElementById('modal-cadastro');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+
+    // 2. Configura a visão do tabuleiro (Inverte se for preto)
+    if (meuLado === 'preto') {
+        document.body.classList.add('visao-preto');
+    } else {
+        document.body.classList.remove('visao-preto');
+    }
+
+    // 3. Atualiza os nomes no placar físico
+    const idInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
+    const campo = document.getElementById(idInput);
+    if (campo) campo.value = meuNome;
+
+    // 4. Ativa funcionalidades de jogo
+    if (typeof window.mostrarMeuBotaoSair === 'function') window.mostrarMeuBotaoSair();
+    if (typeof window.configurarEscutaDeEmojis === 'function') window.configurarEscutaDeEmojis();
+    
+    // 5. Desenha o tabuleiro
+    if (typeof desenhar === 'function') desenhar();
+    
+    console.log("Transição concluída: Jogador movido para o tabuleiro.");
+}
+
 // --- 4. ATUALIZAÇÃO DA LISTA LATERAL EM TEMPO REAL ---
 onValue(listaJogadoresRef, (snapshot) => {
     const jogadoresOnline = snapshot.val() || {};
@@ -959,48 +1064,6 @@ onValue(listaJogadoresRef, (snapshot) => {
         listaUl.appendChild(li);
     }
 });
-
-// --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
-function iniciarEscutaDeConvites() {
-    if (!meuNome || ouvinteConviteAtivo) return;
-    
-    ouvinteConviteAtivo = true;
-    const meuIdRef = meuNome.trim().toLowerCase();
-
-    onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
-        const convite = snapshot.val();
-        if (!convite) return;
-
-        if (convite.status === 'pendente') {
-            // VOCÊ RECEBEU UM CONVITE
-            if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
-                modoJogo = 'online';
-                meuLado = 'preto'; // Convidado joga com as pretas
-                
-                update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
-                
-                window.reiniciar(); // Reseta o tabuleiro para ambos
-                
-                set(ref(db, 'partida_unica/jogadores/preto'), true);
-                set(ref(db, 'partida_unica/nomes/preto'), meuNome);
-            } else {
-                remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-            }
-
-        } else if (convite.status === 'aceito') {
-            // SEU CONVITE FOI ACEITO
-            alert(`${convite.de} aceitou seu desafio!`);
-            
-            modoJogo = 'online';
-            meuLado = 'vermelho'; // Desafiador joga com as vermelhas
-
-            set(ref(db, 'partida_unica/jogadores/vermelho'), true);
-            set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
-
-            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-        }
-    });
-}
 
 // 3. FUNÇÃO DE ALERTA (Visual de 3 segundos)
 function exibirAlertaSaida(nome) {
