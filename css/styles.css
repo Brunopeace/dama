@@ -941,69 +941,41 @@ body.visao-preto .centro {
 .btn-v { background: #ff5f6d; color: white; }
 .btn-p { background: #444; color: white; border: 1px solid #666; }
 
-
-
-/* estilo css emoji novo*/
-
-.emoji-list {
-    background: white;
-    padding: 20px;
-    border-radius: 50px;
-    display: flex;
-    gap: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-.emoji-list span {
-    font-size: 40px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.emoji-list span:hover { transform: scale(1.3); }
-
-
-.emoji-picker-overlay {
-    /* ... seus estilos atuais ... */
-    z-index: 10001; 
-}
-
-/* O corpo do Emoji que vai voar */
+/* Estilo base do Emoji */
 .float-emoji {
-    position: fixed; /* Fixed para ignorar o scroll e focar na tela */
+    position: fixed;
+    font-size: 50px;
+    z-index: 9999;
+    pointer-events: none;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 50px;
-    z-index: 99999;
-    pointer-events: none;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+    opacity: 0;
 }
 
-/* Animação para o jogador que está no TOPO (Preto) */
-.animar-descer {
-    animation: viajarParaBaixo 2s ease-in-out forwards;
+/* Emoji saindo de BAIXO (Seu placar) para o MEIO */
+.animar-meu-emoji {
+    bottom: 10%;
+    animation: subirParaMeio 2s ease-out forwards;
 }
 
-/* Animação para o jogador que está na BASE (Vermelho) */
-.animar-subir {
-    animation: viajarParaCima 2s ease-in-out forwards;
+/* Emoji saindo de CIMA (Placar Oponente) para o MEIO */
+.animar-emoji-oponente {
+    top: 10%;
+    animation: descerParaMeio 2s ease-out forwards;
 }
 
-@keyframes viajarParaBaixo {
-    0% { top: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
-    50% { top: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
-    80% { opacity: 1; }
-    100% { top: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+@keyframes subirParaMeio {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -250px) scale(1); }
 }
 
-@keyframes viajarParaCima {
-    0% { bottom: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
-    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
-    50% { bottom: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
-    80% { opacity: 1; }
-    100% { bottom: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+@keyframes descerParaMeio {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, 20px) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, 250px) scale(1); }
 }
+
 /* fim do estilo css emoji*/
 
 #tela-vitoria.ativo {
