@@ -1,5 +1,3 @@
-// Topo do arquivo
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { 
     getDatabase, 
@@ -361,7 +359,6 @@ window.selecionarModoCard = (modo) => {
         cardAtivo.style.borderColor = "#ff5f6d"; // Destaque na borda
     }
 
-    // 4. Ativação do monitoramento se for Online
     if (modo === 'online') {
         console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
         if (typeof iniciarMonitoramentoOnline === 'function') iniciarMonitoramentoOnline();
@@ -605,7 +602,6 @@ window.fazerLogin = function() {
     }, { onlyOnce: true });
 };
 
-//mostra só o botão 
 
 function mostrarMeuBotaoSair() {
     const botoesAntigos = document.querySelectorAll('.btn-sair');
