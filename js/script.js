@@ -400,6 +400,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+
+
+
+
+
+
+
+
 //
 window.confirmarCadastro = async (ladoEscolhido) => {
     // 1. Validação de Segurança
@@ -433,7 +442,6 @@ window.confirmarCadastro = async (ladoEscolhido) => {
 
     // 5. Lógica de Conexão Online
     if (modoJogo === 'online') {
-        window.configurarEscutaDeEmojis();
         try {
             // Referências no Banco de Dados
             const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
@@ -458,20 +466,18 @@ window.confirmarCadastro = async (ladoEscolhido) => {
             onDisconnect(playerPhotoRef).remove();
             onDisconnect(minhaPresencaRef).remove();
 
-            // Ativa escuta de emojis
+            // ✅ ATIVAÇÃO DA ESCUTA DE EMOJIS (Para receber do adversário)
             if (typeof window.configurarEscutaDeEmojis === 'function') {
                 window.configurarEscutaDeEmojis();
             }
 
-            // --- CORREÇÃO DA PEÇA ADIANTADA: SINCRONIZAÇÃO DO TABULEIRO ---
-            // Usamos onlyOnce para decidir se precisamos criar um novo tabuleiro
+            // --- SINCRONIZAÇÃO DO TABULEIRO (Resolve o erro da peça adiantada) ---
             onValue(gameRef, (snap) => {
                 if (!snap.exists()) {
-                    console.log("Tabuleiro não encontrado no Firebase. Iniciando novo...");
+                    console.log("Tabuleiro vazio. Reiniciando...");
                     if (typeof reiniciar === 'function') reiniciar();
                 } else {
-                    console.log("Tabuleiro existente encontrado. Sincronizando...");
-                    // Se o tabuleiro já existe (o outro jogador já criou), carregamos ele
+                    console.log("Sincronizando tabuleiro existente...");
                     mapa = snap.val();
                     if (typeof desenhar === 'function') desenhar();
                 }
@@ -488,7 +494,6 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
         
-        // Reinicia o tabuleiro localmente para o modo IA
         if (typeof reiniciar === 'function') reiniciar();
     }
 
@@ -514,6 +519,26 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         }
     }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // janelas
 
