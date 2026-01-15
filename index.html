@@ -23,76 +23,75 @@
                 <div class="logo-circle">
                     <img src="img/icon-192.png" alt="Logo" class="logo-img">
                 </div>
-                <h2>Bem-vindo</h2>
+                <h2>Damas Online</h2>
             </div>
 
             <div class="modal-body">
-    <div class="auth-tabs">
-        <button id="tab-login" class="active" onclick="alternarAuth('login')">Entrar</button>
-        <button id="tab-cadastro" onclick="alternarAuth('cadastro')">Cadastrar</button>
-    </div>
-
-    <div id="secao-login">
-        <div class="input-group">
-            <label>Seu nome de usuário</label>
-            <input type="text" id="login-nome" placeholder="Digite para entrar...">
-        </div>
-        
-            <div class="remember-me-container">
-                <input type="checkbox" id="checkbox-lembrar">
-                <label for="checkbox-lembrar">Manter conectado</label>
-        </div>
-    
-        <button class="btn-novo-jogo" onclick="fazerLogin()">ACESSAR CONTA</button>
-    </div>
-
-    <div id="secao-cadastro" style="display: none;">
-        <div class="input-group">
-            <label>Escolha um nome de usuário</label>
-            <input type="text" id="cadastro-nome" placeholder="Mínimo 3 letras...">
-        </div>
-        <button class="btn-novo-jogo" onclick="fazerCadastro()">CRIAR MEU NOME</button>
-    </div>
-
-    <div id="pos-login-area" style="display: none;">
-        <div id="painel-lobby" class="lobby-container">
-            <div class="lobby-header">
-                <span class="status-dot online"></span>
-                <h3>Jogadores Online</h3>
-            </div>
-            <ul id="lista-jogadores"></ul>
-        </div>
-        
-        <div class="step-label">Selecione o modo de jogo</div>
-        <div class="modo-grid">
-            <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
-                <span class="card-icon">🤖</span>
-                <div class="card-info"><span class="card-title">Modo Treinamento</span></div>
-            </div>
-            <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
-                <span class="card-icon">🌐</span>
-                <div class="card-info"><span class="card-title">Modo Online</span></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-                <div id="side-selection" class="side-container" style="display: none;">
-                    <div class="step-label">Escolha sua cor</div>
-                    <div class="side-grid">
-                        <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
-                            <span class="dot"></span> Vermelho
-                        </button>
-                        <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
-                            <span class="dot"></span> Preto
-                        </button>
-                    </div>
+                <div class="auth-tabs">
+                    <button id="tab-login" class="active" onclick="alternarAuth('login')">Entrar</button>
+                    <button id="tab-cadastro" onclick="alternarAuth('cadastro')">Cadastrar</button>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <div id="game-layout">
+                <div id="secao-login">
+                    <div class="input-group">
+                        <label>Seu nome de usuário</label>
+                        <input type="text" id="login-nome" placeholder="Digite para entrar...">
+                    </div>
+                    
+                    <div class="remember-me-container">
+                        <input type="checkbox" id="checkbox-lembrar">
+                        <label for="checkbox-lembrar">Manter conectado</label>
+                    </div>
+                
+                    <button class="btn-novo-jogo" onclick="fazerLogin()">ACESSAR CONTA</button>
+                </div>
+
+                <div id="secao-cadastro" style="display: none;">
+                    <div class="input-group">
+                        <label>Escolha um nome de usuário</label>
+                        <input type="text" id="cadastro-nome" placeholder="Mínimo 3 letras...">
+                    </div>
+                    <button class="btn-novo-jogo" onclick="fazerCadastro()">CRIAR MEU NOME</button>
+                </div>
+
+                <div id="pos-login-area" style="display: none;">
+                    
+                    <div id="painel-lobby" class="lobby-container">
+                        <div class="lobby-header">
+                            <span class="status-dot online"></span>
+                            <h3>Jogadores Online</h3>
+                        </div>
+                        <ul id="lista-jogadores"></ul>
+                    </div>
+                    
+                    <div class="step-label">Selecione o modo de jogo</div>
+                    <div class="modo-grid">
+                        <div class="option-card" onclick="selecionarModoCard('ia')" id="card-ia">
+                            <span class="card-icon">🤖</span>
+                            <div class="card-info"><span class="card-title">Modo Treinamento</span></div>
+                        </div>
+                        <div class="option-card" onclick="selecionarModoCard('online')" id="card-online">
+                            <span class="card-icon">🌐</span>
+                            <div class="card-info"><span class="card-title">Modo Online</span></div>                
+                        </div>           
+                    </div>
+
+                    <div id="side-selection" class="side-container" style="display: none; margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+                        <div class="step-label">Escolha sua cor</div>
+                        <div class="side-grid">
+                            
+                            <button id="btn-escolher-vermelho" onclick="confirmarCadastro('vermelho')" class="side-btn red">
+                                <span class="dot"></span> Vermelho
+                            </button>
+                            <button id="btn-escolher-preto" onclick="confirmarCadastro('preto')" class="side-btn black">
+                                <span class="dot"></span> Preto
+                            </button>
+                            
+                            
+                            </div>
+                    </div> 
+
+                </div> </div> </div> </div> <div id="game-layout">
         <div class="placar-container" id="container-topo">
             <div id="box-preto" class="count-box">
                 <span class="badge-vez">Sua Vez</span>
