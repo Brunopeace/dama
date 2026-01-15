@@ -199,15 +199,6 @@ onValue(vencedorRef, (snap) => {
     }
 });
 
-
-
-
-
-
-
-
-
-
 // --- VARIÁVEIS GLOBAIS ---
 let usuarioAutenticado = false;
 let ouvinteConviteAtivo = false;
@@ -217,8 +208,8 @@ let monitoresIniciados = false;
 let temporizadoresSaida = {};
 let jogadoresAntigos = {};
 let nomesAnteriores = {};
-let modoJogo = 'online'; 
-let meuLado = new URLSearchParams(window.location.search).get('lado'); 
+let modoJogo = 'ia';
+let meuLado = '';
 let meuNome = "";
 let mapa = [];
 let turno = 1; 
@@ -367,6 +358,7 @@ document.addEventListener('mousedown', (event) => {
 
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
+    // 1. Verificação de Segurança
     if (!usuarioAutenticado || !meuNome) {
         alert("Por favor, faça Login ou Cadastro antes de selecionar o modo.");
         const loginInput = document.getElementById('login-nome');
@@ -374,139 +366,160 @@ window.selecionarModoCard = (modo) => {
         return;
     }
 
+    // 2. Define o modo globalmente
     modoJogo = modo;
 
-    // 2. Feedback visual nos cards
-    document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+    // 3. Feedback visual nos cards (remove de um e coloca no outro)
+    document.querySelectorAll('.option-card').forEach(c => {
+        c.style.borderColor = "rgba(255, 255, 255, 0.1)"; // Reset borda
+        c.classList.remove('selected');
+    });
+
     const cardAtivo = document.getElementById(`card-${modo}`);
     if (cardAtivo) {
         cardAtivo.classList.add('selected');
+        cardAtivo.style.borderColor = "#ff5f6d"; // Destaque na borda
     }
 
-    // 3. Ativação do monitoramento se for Online
+    // 4. Ativação do monitoramento se for Online
     if (modo === 'online') {
         console.log("🌐 Modo Online selecionado. Ativando monitoramentos...");
-
-        if (typeof iniciarMonitoramentoOnline === 'function') {
-            iniciarMonitoramentoOnline();
-        }
-
-        if (typeof iniciarMonitoramentoFotos === 'function') {
-            iniciarMonitoramentoFotos();
-        }
+        if (typeof iniciarMonitoramentoOnline === 'function') iniciarMonitoramentoOnline();
+        if (typeof iniciarMonitoramentoFotos === 'function') iniciarMonitoramentoFotos();
         monitoresIniciados = true;
     }
 
-    // 4. Mostra a escolha de lados (Vermelho/Preto)
+    // 5. MOSTRAR A ESCOLHA DE CORES (VERMELHO/PRETO)
     const sideSelection = document.getElementById('side-selection');
     if (sideSelection) {
+        // Forçamos o display block e garantimos visibilidade
         sideSelection.style.display = 'block';
-        sideSelection.style.animation = 'fadeIn 0.5s ease';
+        sideSelection.style.opacity = '1';
+        sideSelection.style.animation = 'fadeIn 0.5s ease forwards';
         
-        // Scroll suave para mostrar as opções de cores em telas pequenas
-        sideSelection.scrollIntoView({ behavior: 'smooth' });
+        // Scroll suave para garantir que os botões de cores apareçam na tela
+        setTimeout(() => {
+            sideSelection.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 100);
+    } else {
+        console.error("Erro: O elemento 'side-selection' não foi encontrado!");
     }
 };
 
-
-// Assim que a página carrega, verifica se existe um nome salvo
+// --- CARREGAMENTO AUTOMÁTICO ---
 window.addEventListener('DOMContentLoaded', () => {
     const nomeSalvo = localStorage.getItem('dama_user_remember');
     if (nomeSalvo) {
-        document.getElementById('login-nome').value = nomeSalvo;
-        document.getElementById('checkbox-lembrar').checked = true;
+        const inputNome = document.getElementById('login-nome');
+        const checkLembrar = document.getElementById('checkbox-lembrar');
         
-        // fazer Login automático
+        if (inputNome) inputNome.value = nomeSalvo;
+        if (checkLembrar) checkLembrar.checked = true;
         
-        fazerLogin()
+        // Tenta o login automático após um pequeno delay para o Firebase carregar
+        setTimeout(() => {
+            if (typeof fazerLogin === 'function') fazerLogin();
+        }, 500);
     }
 });
 
-window.confirmarCadastro = (ladoEscolhido) => {
+window.confirmarCadastro = async (ladoEscolhido) => {
+    // 1. Validação de Segurança
     if (!usuarioAutenticado || !meuNome) {
         alert("Por favor, faça login ou cadastre-se primeiro!");
         return;
     }
 
+    console.log(`Iniciando partida como: ${ladoEscolhido} no modo ${modoJogo}`);
+
     const nomeOriginal = meuNome;
-    const nomeFormatado = meuNome.toLowerCase();
+    const nomeFormatado = meuNome.toLowerCase().trim();
 
-    // 1. ATUALIZAÇÃO DA VARIÁVEL GLOBAL
-    meuLado = ladoEscolhido;
-    if (typeof mostrarMeuBotaoSair === 'function') mostrarMeuBotaoSair(); 
+    // 2. Atualização de Estado Global
+    meuLado = ladoEscolhido; // 'vermelho' ou 'preto'
+    
+    // Mostra botão sair se a função existir
+    if (typeof window.mostrarMeuBotaoSair === 'function') window.mostrarMeuBotaoSair(); 
 
-    // 2. INVERSÃO VISUAL DA INTERFACE
+    // 3. Inversão Visual (CSS)
+    // Se o jogador escolher preto, o tabuleiro e placares giram
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
         document.body.classList.remove('visao-preto');
     }
 
-    // 3. ATUALIZAÇÃO LOCAL DO NOME NO PLACAR (Visual imediato)
+    // 4. Atualização do Placar Local
     const idMeuInput = (meuLado === 'vermelho') ? 'input-nome-v' : 'input-nome-p';
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
-    // 4. LÓGICA PARA MODO ONLINE
+    // 5. Lógica de Conexão
     if (modoJogo === 'online') {
-        // REGISTRAR PRESENÇA NO LOBBY (usuarios_online)
-        // Usamos o nome formatado (minúsculo) como chave para evitar duplicatas por erro de digitação
-        const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
-        set(minhaPresencaRef, { 
-            online: true, 
-            nome: nomeOriginal,
-            lastChanged: Date.now()
-        });
+        try {
+            // Referências no Banco de Dados
+            const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
+            const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
+            const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
+            const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
 
-        // SALVAMENTO DOS DADOS DA PARTIDA ESPECÍFICA
-        const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
-        const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
-        const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
+            // Registra presença e dados da partida
+            await set(minhaPresencaRef, { 
+                online: true, 
+                nome: nomeOriginal,
+                lastChanged: Date.now()
+            });
 
-        set(playerStatusRef, true);
-        set(playerNameRef, nomeOriginal);
-        
-        // 5. CONFIGURAÇÃO DE DESCONEXÃO (onDisconnect)
-        // Se o jogador fechar a aba ou cair a net, o Firebase limpa os dados automaticamente
-        import("https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js").then(pkg => {
-            pkg.onDisconnect(playerStatusRef).remove();
-            pkg.onDisconnect(playerNameRef).remove();
-            pkg.onDisconnect(playerPhotoRef).remove();
-            pkg.onDisconnect(minhaPresencaRef).remove();
-        });
+            await set(playerStatusRef, true);
+            await set(playerNameRef, nomeOriginal);
 
-        // Garante que o tabuleiro esteja sincronizado ao entrar
-        onValue(gameRef, (snap) => {
-            if (!snap.exists()) reiniciar();
-        }, { onlyOnce: true });
+            // Configuração de Desconexão Automática
+            onDisconnect(playerStatusRef).remove();
+            onDisconnect(playerNameRef).remove();
+            onDisconnect(playerPhotoRef).remove();
+            onDisconnect(minhaPresencaRef).remove();
 
+            // Sincronização inicial do tabuleiro
+            const gameRef = ref(db, 'partida_unica/tabuleiro');
+            onValue(gameRef, (snap) => {
+                if (!snap.exists() && typeof reiniciar === 'function') reiniciar();
+            }, { onlyOnce: true });
+
+        } catch (error) {
+            console.error("Erro ao conectar ao modo online:", error);
+            alert("Erro de conexão com o servidor.");
+            return;
+        }
     } else {
-        // 6. MODO IA (OFFLINE)
+        // MODO IA (OFFLINE)
         const ladoIA = (meuLado === 'vermelho') ? 'p' : 'v';
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
         
-        // No modo IA, resetamos o tabuleiro localmente para começar do zero
-        reiniciar();
+        // Reinicia o tabuleiro localmente
+        if (typeof reiniciar === 'function') reiniciar();
     }
 
-    // 7. FINALIZAÇÃO VISUAL E FECHAMENTO DOS MODAIS
+    // 6. Finalização da Interface do Modal
     const modal = document.getElementById('modal-cadastro');
-    if (modal) modal.style.display = 'none';
-    
-    const selecaoLado = document.getElementById('side-selection');
-    if (selecaoLado) selecaoLado.style.display = 'none';
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
 
-    // Redesenha o tabuleiro para garantir que as peças apareçam na posição correta
-    desenhar();
+    // 7. Renderização Inicial
+    if (typeof desenhar === 'function') desenhar();
 
-    // 8. DISPARO DA JOGADA INICIAL DA IA
+    // 8. Disparo da Jogada Inicial se for a vez da IA
     if (modoJogo === 'ia') {
-        // Se o turno inicial pertencer à cor que a IA está controlando
-        const idTurnoIA = (meuLado === 'vermelho' ? 2 : 1);
-        if (turno === idTurnoIA) {
+        // Vermelho costuma ser ID 1 e Preto ID 2
+        // Se a IA for o Vermelho (lado 'v') e for o turno 1, ou vice-versa
+        const turnoIA = (meuLado === 'vermelho' ? 2 : 1); 
+        if (typeof turno !== 'undefined' && turno === turnoIA) {
             setTimeout(() => { 
-                if (typeof jogadaDaIA === 'function') jogadaDaIA(); 
+                if (typeof window.jogadaDaIA === 'function') window.jogadaDaIA(); 
             }, 1000); 
         }
     }
