@@ -722,21 +722,6 @@ body.visao-preto .centro {
     border-color: #ffce00;
 }
 
-/* BOTÃO DE EMOJI */
-.btn-emoji-trigger {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    padding: 8px;
-    cursor: pointer;
-    font-size: 18px;
-    transition: transform 0.2s;
-}
-
-.btn-emoji-trigger:active {
-    transform: scale(0.9);
-}
-
 /* PONTUAÇÃO (ÁREA INFERIOR) */
 .pontuacao {
     display: flex;
@@ -942,6 +927,43 @@ body.visao-preto .centro {
 .btn-p { background: #444; color: white; border: 1px solid #666; }
 
 /* Estilo base do Emoji */
+
+.btn-emoji-trigger {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: transform 0.2s;
+}
+
+.btn-emoji-trigger:active {
+    transform: scale(0.9);
+}
+
+.emoji-list {
+    background: white;
+    padding: 20px;
+    border-radius: 50px;
+    display: flex;
+    gap: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.emoji-list span {
+    font-size: 40px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.emoji-list span:hover { transform: scale(1.3); }
+
+
+.emoji-picker-overlay {
+    z-index: 10001; 
+}
+
 .float-emoji {
     position: fixed;
     font-size: 50px;
@@ -964,16 +986,20 @@ body.visao-preto .centro {
     animation: descerParaMeio 2s ease-out forwards;
 }
 
-@keyframes subirParaMeio {
-    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
-    20% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -250px) scale(1); }
+@keyframes descerParaMeio {
+    0% { top: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
+    50% { top: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
+    80% { opacity: 1; }
+    100% { top: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
 }
 
-@keyframes descerParaMeio {
-    0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
-    20% { opacity: 1; transform: translate(-50%, 20px) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, 250px) scale(1); }
+@keyframes subirParaMeio {
+    0% { bottom: 10%; opacity: 0; transform: translateX(-50%) scale(0.5); }
+    20% { opacity: 1; transform: translateX(-50%) scale(1.5); }
+    50% { bottom: 50%; opacity: 1; transform: translateX(-50%) scale(2); } /* Meio do tabuleiro */
+    80% { opacity: 1; }
+    100% { bottom: 60%; opacity: 0; transform: translateX(-50%) scale(0.5); }
 }
 
 /* fim do estilo css emoji*/
