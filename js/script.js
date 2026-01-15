@@ -1244,24 +1244,24 @@ document.addEventListener('mousedown', (event) => {
 
 
 // ✅ emojis
-function exibirEmojiNaTela(emoji, lado) {
+
+function exibirEmojiNaTela(emoji, ladoDoEmoji) {
     const el = document.createElement('div');
     el.className = 'float-emoji';
     el.innerText = emoji;
 
-    if (lado === 'vermelho') {
-        el.classList.add('animar-subir');
+    if (ladoDoEmoji === meuLado) {
+        el.classList.add('animar-meu-emoji');
     } else {
-        el.classList.add('animar-descer');
+        el.classList.add('animar-emoji-oponente');
     }
 
     document.body.appendChild(el);
 
     setTimeout(() => {
         el.remove();
-    }, 2500);
+    }, 2000);
 }
-
 
 window.enviarEmoji = function(emoji) {
     // 1. FECHA O MODAL IMEDIATAMENTE
