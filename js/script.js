@@ -48,13 +48,6 @@ document.addEventListener('input', (e) => {
     }
 });
 
-
-
-
-
-
-
-
 //Fim do topo do arquivo
 
 // Monitor de nomes
@@ -343,19 +336,6 @@ window.alterarNome = function(lado) {
     }
 };
 
-// --- SISTEMA DE EMOJIS ---
-window.abrirModalEmoji = function(ladoDoBotao) {
-    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
-    document.getElementById('modal-emoji-selecao').classList.add('active');
-};
-
-document.addEventListener('mousedown', (event) => {
-    const modal = document.getElementById('modal-emoji-selecao');
-    if (modal?.classList.contains('active') && event.target === modal) {
-        modal.classList.remove('active');
-    }
-});
-
 // --- LÓGICA DO JOGO ---
 window.selecionarModoCard = (modo) => {
     // 1. Verificação de Segurança
@@ -435,14 +415,13 @@ window.confirmarCadastro = async (ladoEscolhido) => {
     const nomeOriginal = meuNome;
     const nomeFormatado = meuNome.toLowerCase().trim();
 
-    // 2. Atualização de Estado Global
-    meuLado = ladoEscolhido; // 'vermelho' ou 'preto'
-    
-    // Mostra botão sair se a função existir
-    if (typeof window.mostrarMeuBotaoSair === 'function') window.mostrarMeuBotaoSair(); 
+    // 2. Atualização de Estado Global e Botão Sair
+    meuLado = ladoEscolhido;
+    if (typeof mostrarMeuBotaoSair === 'function') {
+        mostrarMeuBotaoSair(); 
+    }
 
     // 3. Inversão Visual (CSS)
-    // Se o jogador escolher preto, o tabuleiro e placares giram
     if (meuLado === 'preto') {
         document.body.classList.add('visao-preto');
     } else {
@@ -473,11 +452,17 @@ window.confirmarCadastro = async (ladoEscolhido) => {
             await set(playerStatusRef, true);
             await set(playerNameRef, nomeOriginal);
 
-            // Configuração de Desconexão Automática
+            // Configuração de Desconexão (onDisconnect)
             onDisconnect(playerStatusRef).remove();
             onDisconnect(playerNameRef).remove();
             onDisconnect(playerPhotoRef).remove();
             onDisconnect(minhaPresencaRef).remove();
+
+            // --- CHAMADA DA ESCUTA DE EMOJIS ---
+            // Isso permite que você receba emojis do oponente no modo online
+            if (typeof window.configurarEscutaDeEmojis === 'function') {
+                window.configurarEscutaDeEmojis();
+            }
 
             // Sincronização inicial do tabuleiro
             const gameRef = ref(db, 'partida_unica/tabuleiro');
@@ -500,7 +485,7 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         if (typeof reiniciar === 'function') reiniciar();
     }
 
-    // 6. Finalização da Interface do Modal
+    // 6. Finalização Visual do Modal
     const modal = document.getElementById('modal-cadastro');
     if (modal) {
         modal.style.opacity = '0';
@@ -509,13 +494,11 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         }, 300);
     }
 
-    // 7. Renderização Inicial
+    // 7. Renderização Inicial do Tabuleiro
     if (typeof desenhar === 'function') desenhar();
 
     // 8. Disparo da Jogada Inicial se for a vez da IA
     if (modoJogo === 'ia') {
-        // Vermelho costuma ser ID 1 e Preto ID 2
-        // Se a IA for o Vermelho (lado 'v') e for o turno 1, ou vice-versa
         const turnoIA = (meuLado === 'vermelho' ? 2 : 1); 
         if (typeof turno !== 'undefined' && turno === turnoIA) {
             setTimeout(() => { 
@@ -622,22 +605,26 @@ window.fazerLogin = function() {
     }, { onlyOnce: true });
 };
 
+//mostra só o botão 
+
 function mostrarMeuBotaoSair() {
-    // Remove qualquer botão de sair existente para evitar duplicatas
     const botoesAntigos = document.querySelectorAll('.btn-sair');
     botoesAntigos.forEach(b => b.remove());
 
-    // Define qual é a MINHA caixa de placar
     const idMinhaCaixa = (meuLado === 'vermelho') ? 'box-vermelho' : 'box-preto';
     const container = document.getElementById(idMinhaCaixa);
 
     if (container) {
         const btn = document.createElement('button');
         btn.className = 'btn-sair';
-        btn.innerText = 'Sair';
+        btn.innerHTML = 'SAIR';
         
-        // Chama a função de sair que exclui o Firebase
-        btn.onclick = () => window.sairDoJogo(); 
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            if(confirm("Deseja realmente sair da partida?")) {
+                window.sairDoJogo();
+            }
+        }; 
         
         container.appendChild(btn);
     }
@@ -1176,6 +1163,35 @@ function atualizarDestaqueTurno() {
     }
 }
 
+// --- SISTEMA DE EMOJIS
+
+window.configurarEscutaDeEmojis = function() {
+    onValue(emojiRef, (snapshot) => {
+        const dados = snapshot.val();
+        if (dados && dados.ts) {
+            // Verifica se o emoji é novo (enviado nos últimos 3 segundos) 
+            // para evitar que emojis antigos apareçam ao carregar a página
+            const agora = Date.now();
+            if (agora - dados.ts < 3000) {
+                exibirEmojiNaTela(dados.texto, dados.lado);
+            }
+        }
+    });
+};
+
+window.abrirModalEmoji = function(ladoDoBotao) {
+    if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
+    document.getElementById('modal-emoji-selecao').classList.add('active');
+};
+
+document.addEventListener('mousedown', (event) => {
+    const modal = document.getElementById('modal-emoji-selecao');
+    if (modal?.classList.contains('active') && event.target === modal) {
+        modal.classList.remove('active');
+    }
+});
+
+
 // ✅ emojis
 function exibirEmojiNaTela(emoji, lado) {
     const el = document.createElement('div');
@@ -1195,30 +1211,26 @@ function exibirEmojiNaTela(emoji, lado) {
     }, 2500);
 }
 
+
 window.enviarEmoji = function(emoji) {
-    // 1. FECHA O MODAL IMEDIATAMENTE
+    // 1. Fecha o modal
     const modalEmoji = document.getElementById('modal-emoji-selecao');
     if (modalEmoji) {
-        modalEmoji.style.display = 'none';
-        modalEmoji.classList.remove('ativo', 'active', 'show');
+        modalEmoji.classList.remove('active');
+        modalEmoji.style.display = 'none'; // Garantia extra
     }
 
-    // 2. VERIFICA SE O LADO ESTÁ DEFINIDO
-    if (!meuLado) {
-        console.warn("Lado não definido. Escolha uma cor antes de enviar emojis.");
-        return;
-    }
+    if (!meuLado) return;
 
-    // 3. LÓGICA DE ENVIO (Firebase)
+    // 2. Envio para o Firebase
     if (modoJogo === 'online') {
-        // Padronizando os nomes para: 'texto' e 'ts' (conforme seu onValue)
         set(emojiRef, { 
             texto: emoji, 
             lado: meuLado, 
             ts: Date.now() 
-        }).catch(err => console.error("Erro ao enviar emoji:", err));
+        });
     } else {
-        // Se for modo IA, apenas exibe localmente para diversão
+        // Local no modo IA
         exibirEmojiNaTela(emoji, meuLado);
     }
 };
