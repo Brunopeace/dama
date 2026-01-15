@@ -31,7 +31,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: bold;
-    width: 80px;
+    width: 60px;
 }
 
 .btn-sair:hover {
@@ -473,7 +473,7 @@ body.visao-preto .centro {
 
 .side-btn.red .dot {
     background: #ff5f6d;
-    box-shadow: 0 0 1px #ffffff;
+    border: 1px solid #ffffff;
     }
     
 .side-btn.black .dot {
