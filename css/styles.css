@@ -422,43 +422,69 @@ body.visao-preto .centro {
     color: #777;
     }
 
-/* Botões de Lado */
+.side-container {
+    display: none; /* Ativado pelo JS */
+    width: 100%;
+    margin-top: 20px;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.4s ease forwards;
+}
+
 .side-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 10px;
-    }
-    
+    display: flex !important; /* Força os botões lado a lado */
+    justify-content: space-between;
+    gap: 15px;
+    margin-top: 15px;
+}
+
 .side-btn {
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-    display: flex;
+    flex: 1; 
+    display: flex !important; /* Garante que o botão não colapse */
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
+    height: 55px !important; /* Altura mínima obrigatória */
+    min-height: 55px;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    background: #252525 !important; /* Fundo sólido para não sumir no escuro */
+    color: #ffffff !important;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .side-btn.red {
-    background: #b91d1d;
-    color: white;
-    }
-    
+    border: 1px solid #ff5f6d !important;
+}
+
 .side-btn.black {
-    background: #000;
-    color: white;
-    border: 1px solid #333;
+    border-color: #000000 !important;
+}
+
+.side-btn .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.side-btn.red .dot {
+    background: #ff5f6d;
+    box-shadow: 0 0 1px #ffffff;
     }
     
-.side-btn .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: white;
+.side-btn.black .dot {
+    background: #000000;
+    border: 1px solid #ffffff;
     }
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 .input-nome:disabled {
     background: transparent;
