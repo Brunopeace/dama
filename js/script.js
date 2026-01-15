@@ -400,6 +400,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+//🚨
 window.confirmarCadastro = async (ladoEscolhido) => {
     // 1. Validação de Segurança
     if (!usuarioAutenticado || !meuNome) {
@@ -430,7 +431,7 @@ window.confirmarCadastro = async (ladoEscolhido) => {
     const campoNome = document.getElementById(idMeuInput);
     if (campoNome) campoNome.value = nomeOriginal;
 
-    // 5. Lógica de Conexão
+    // 5. Lógica de Conexão Online
     if (modoJogo === 'online') {
         try {
             // Referências no Banco de Dados
@@ -438,6 +439,7 @@ window.confirmarCadastro = async (ladoEscolhido) => {
             const playerStatusRef = ref(db, `partida_unica/jogadores/${ladoEscolhido}`);
             const playerNameRef = ref(db, `partida_unica/nomes/${ladoEscolhido}`);
             const playerPhotoRef = ref(db, `partida_unica/fotos/${ladoEscolhido}`);
+            const gameRef = ref(db, 'partida_unica/tabuleiro');
 
             // Registra presença e dados da partida
             await set(minhaPresencaRef, { 
@@ -455,16 +457,23 @@ window.confirmarCadastro = async (ladoEscolhido) => {
             onDisconnect(playerPhotoRef).remove();
             onDisconnect(minhaPresencaRef).remove();
 
-            // --- CHAMADA DA ESCUTA DE EMOJIS ---
-            // Isso permite que você receba emojis do oponente no modo online
+            // Ativa escuta de emojis
             if (typeof window.configurarEscutaDeEmojis === 'function') {
                 window.configurarEscutaDeEmojis();
             }
 
-            // Sincronização inicial do tabuleiro
-            const gameRef = ref(db, 'partida_unica/tabuleiro');
+            // --- CORREÇÃO DA PEÇA ADIANTADA: SINCRONIZAÇÃO DO TABULEIRO ---
+            // Usamos onlyOnce para decidir se precisamos criar um novo tabuleiro
             onValue(gameRef, (snap) => {
-                if (!snap.exists() && typeof reiniciar === 'function') reiniciar();
+                if (!snap.exists()) {
+                    console.log("Tabuleiro não encontrado no Firebase. Iniciando novo...");
+                    if (typeof reiniciar === 'function') reiniciar();
+                } else {
+                    console.log("Tabuleiro existente encontrado. Sincronizando...");
+                    // Se o tabuleiro já existe (o outro jogador já criou), carregamos ele
+                    mapa = snap.val();
+                    if (typeof desenhar === 'function') desenhar();
+                }
             }, { onlyOnce: true });
 
         } catch (error) {
@@ -478,7 +487,7 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         const campoIA = document.getElementById('input-nome-' + ladoIA);
         if (campoIA) campoIA.value = "Máquina 🤖";
         
-        // Reinicia o tabuleiro localmente
+        // Reinicia o tabuleiro localmente para o modo IA
         if (typeof reiniciar === 'function') reiniciar();
     }
 
@@ -491,10 +500,10 @@ window.confirmarCadastro = async (ladoEscolhido) => {
         }, 300);
     }
 
-    // 7. Renderização Inicial do Tabuleiro
+    // 7. Renderização Final
     if (typeof desenhar === 'function') desenhar();
 
-    // 8. Disparo da Jogada Inicial se for a vez da IA
+    // 8. Lógica de Turno da IA
     if (modoJogo === 'ia') {
         const turnoIA = (meuLado === 'vermelho' ? 2 : 1); 
         if (typeof turno !== 'undefined' && turno === turnoIA) {
@@ -521,7 +530,6 @@ window.alternarAuth = function(tipo) {
         tLogin.classList.remove('active'); tCadastro.classList.add('active');
     }
 };
-
 
 window.fazerCadastro = function() {
     const nome = document.getElementById('cadastro-nome').value.trim();
@@ -1041,12 +1049,13 @@ window.encerrarPartida = function() {
     }
 };
 
-// 🟢 função reiniciar
+//✅ função reiniciar
  
 window.reiniciar = () => {
     console.log("Reiniciando jogo...");
 
-    // 1. Restaurar o Tabuleiro (Mapa inicial)
+    // 1. Restaurar o Tabuleiro (Mapa inicial padrão)
+    // 2 = Pretas, 1 = Vermelhas, 0 = Vazio
     mapa = [
         [0, 2, 0, 2, 0, 2, 0, 2], 
         [2, 0, 2, 0, 2, 0, 2, 0], 
@@ -1059,13 +1068,13 @@ window.reiniciar = () => {
     ];
 
     // 2. Resetar variáveis de estado locais
-    turno = 1; 
+    turno = 1; // Vermelho sempre começa
     capturasV = 0; 
     capturasP = 0; 
     selecionada = null;
     jogoIniciado = true;
 
-    // 3. Esconder Modais de Fim de Jogo
+    // 3. Esconder Modais de Fim de Jogo e Resetar Placar Visual
     const modais = ['tela-vitoria', 'tela-derrota'];
     modais.forEach(id => {
         const el = document.getElementById(id);
@@ -1075,6 +1084,12 @@ window.reiniciar = () => {
         }
     });
 
+    // Resetar contadores de captura no HTML
+    const cp = document.getElementById('capturas-p');
+    const cv = document.getElementById('capturas-v');
+    if (cp) cp.innerText = "0";
+    if (cv) cv.innerText = "0";
+
     // 4. Atualizar a Interface Local
     desenhar();
     if (typeof atualizarUI === 'function') atualizarUI();
@@ -1082,28 +1097,33 @@ window.reiniciar = () => {
 
     // 5. Sincronizar Firebase (Modo Online)
     if (modoJogo === 'online') {
-        // Importante: No sistema de convites, quem reseta o banco é quem "inicia" a ação
-        // Para evitar conflitos, limpamos os dados de fim de jogo
         const updates = {};
+        // Limpamos o nó da partida e definimos o estado inicial
         updates['partida_unica/tabuleiro'] = mapa;
         updates['partida_unica/turno'] = 1;
-        updates['partida_unica/vencedor'] = null; // Libera a tela do oponente
+        updates['partida_unica/vencedor'] = null; 
         updates['partida_unica/capturasV'] = 0;
         updates['partida_unica/capturasP'] = 0;
+        // Resetar emoji para não aparecer emoji da partida anterior
+        updates['partida_unica/emoji'] = null;
 
         update(ref(db), updates)
             .then(() => console.log("Firebase sincronizado: Nova partida pronta."))
             .catch(err => console.error("Erro ao sincronizar reinício:", err));
             
-        // Limpa convites antigos se houver
-        const meuIdRef = meuNome.trim().toLowerCase();
-        remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        // Limpa convites pendentes do usuário atual
+        if (meuNome) {
+            const meuIdRef = meuNome.trim().toLowerCase();
+            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
+        }
     }
     
     // 6. Lógica de Início para IA
     if (modoJogo === 'ia') {
-        const turnoIA = (meuLado === 'vermelho') ? 2 : 1;
-        if (turno === turnoIA) {
+        // Se eu sou o preto (2) e o turno é 1 (vermelho), a IA joga primeiro
+        // Ou vice-versa, dependendo de quem você definiu que a IA controla
+        const ladoJogadorHumano = meuLado === 'vermelho' ? 1 : 2;
+        if (turno !== ladoJogadorHumano) {
             setTimeout(() => {
                 if (typeof jogadaDaIA === 'function') jogadaDaIA();
             }, 1200); 
