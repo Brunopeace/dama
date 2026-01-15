@@ -210,7 +210,7 @@ let selecionada = null;
 const tabElement = document.getElementById('tabuleiro');
 
 // --- SONS ---
-const somMove = new Audio('movimento.mp3');
+const somMove = new Audio('comeu.wav');
 const somCap = new Audio('movimento.mp3');
 
 function tocarSom(tipo) {
@@ -1795,9 +1795,8 @@ function exibirModalVitoria(vencedor) {
     const texto = document.getElementById('vencedor-texto');
     
     if (tela && texto) {
-        texto.innerText = `VITÓRIA DO ${vencedor}!`;
+        texto.innerText = `Voce venceu!`;
         
-        // Garante que o elemento se torne visível
         tela.style.display = 'flex'; 
         
         setTimeout(() => {
