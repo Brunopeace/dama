@@ -26,7 +26,7 @@ const db = getDatabase(app);
 
 // 1. Definição das Referências
 const gameRef = ref(db, 'partida_unica');
-const emojiRef = ref(db, 'partida_unica/ultimo_emoji');
+const emojiRef = ref(db, 'partida_unica/emoji');
 const nomesRef = ref(db, 'partida_unica/nomes');
 const playersRef = ref(db, 'partida_unica/jogadores');
 const convitesRef = ref(db, 'partida_unica/convites');
@@ -400,7 +400,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-//🚨
+//
 window.confirmarCadastro = async (ladoEscolhido) => {
     // 1. Validação de Segurança
     if (!usuarioAutenticado || !meuNome) {
@@ -433,6 +433,7 @@ window.confirmarCadastro = async (ladoEscolhido) => {
 
     // 5. Lógica de Conexão Online
     if (modoJogo === 'online') {
+        window.configurarEscutaDeEmojis();
         try {
             // Referências no Banco de Dados
             const minhaPresencaRef = ref(db, `usuarios_online/${nomeFormatado}`);
@@ -1182,18 +1183,27 @@ function atualizarDestaqueTurno() {
 // --- SISTEMA DE EMOJIS
 
 window.configurarEscutaDeEmojis = function() {
+    console.log("👂 Escuta de emojis ativada no Firebase...");
+    
     onValue(emojiRef, (snapshot) => {
         const dados = snapshot.val();
+        
+        // Só exibe se houver dados e se for um emoji enviado nos últimos 3 segundos
         if (dados && dados.ts) {
-            // Verifica se o emoji é novo (enviado nos últimos 3 segundos) 
-            // para evitar que emojis antigos apareçam ao carregar a página
             const agora = Date.now();
-            if (agora - dados.ts < 3000) {
-                exibirEmojiNaTela(dados.texto, dados.lado);
+            const diferenca = agora - dados.ts;
+
+            if (diferenca < 3000) {
+                console.log("😄 Emoji recebido:", dados.texto);
+                // Exibe na tela (função que cria o elemento flutuante)
+                if (typeof exibirEmojiNaTela === 'function') {
+                    exibirEmojiNaTela(dados.texto, dados.lado);
+                }
             }
         }
     });
 };
+
 
 window.abrirModalEmoji = function(ladoDoBotao) {
     if (modoJogo === 'online' && ladoDoBotao !== meuLado) return;
@@ -1229,25 +1239,35 @@ function exibirEmojiNaTela(emoji, lado) {
 
 
 window.enviarEmoji = function(emoji) {
-    // 1. Fecha o modal
+    // 1. FECHA O MODAL IMEDIATAMENTE
     const modalEmoji = document.getElementById('modal-emoji-selecao');
     if (modalEmoji) {
         modalEmoji.classList.remove('active');
-        modalEmoji.style.display = 'none'; // Garantia extra
+        modalEmoji.style.display = 'none'; 
     }
 
-    if (!meuLado) return;
+    // 2. VERIFICA SE O LADO ESTÁ DEFINIDO
+    if (!meuLado) {
+        console.warn("Selecione um lado antes de enviar emojis.");
+        return;
+    }
 
-    // 2. Envio para o Firebase
+    // 3. LÓGICA DE ENVIO
     if (modoJogo === 'online') {
+        console.log("📤 Enviando emoji para o Firebase...");
+        
+        // Atualiza o nó no Firebase com o emoji, o lado e o tempo atual
         set(emojiRef, { 
             texto: emoji, 
             lado: meuLado, 
             ts: Date.now() 
-        });
+        }).catch(err => console.error("Erro ao enviar emoji:", err));
+        
     } else {
-        // Local no modo IA
-        exibirEmojiNaTela(emoji, meuLado);
+        // Se for modo IA (Offline), apenas exibe localmente
+        if (typeof exibirEmojiNaTela === 'function') {
+            exibirEmojiNaTela(emoji, meuLado);
+        }
     }
 };
 
