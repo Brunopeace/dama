@@ -457,11 +457,23 @@ body.visao-preto .centro {
 }
 
 .side-btn.red {
-    border: 1px solid #ff5f6d !important;
+    border: 1px solid #ff0000 !important;
 }
 
 .side-btn.black {
-    border-color: #000000 !important;
+    border: 1px solid #000000 !important;
+}
+
+.side-btn.red:hover {
+    background-color: #ff0000 !important;
+    border: 1px solid #ffffff !important;
+   
+}
+
+.side-btn.black:hover {
+    background-color: #000000 !important;
+    border: 1px solid #ffffff !important;
+    
 }
 
 .side-btn .dot {
@@ -472,7 +484,7 @@ body.visao-preto .centro {
 }
 
 .side-btn.red .dot {
-    background: #ff5f6d;
+    background: #ff0000;
     border: 1px solid #ffffff;
     }
     
