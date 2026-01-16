@@ -901,59 +901,6 @@ window.desafiarJogador = function(nomeOponente) {
     }
 };
 
-// --- 5. ESCUTA DE CONVITES RECEBIDOS OU ACEITOS ---
-function iniciarEscutaDeConvites() {
-    if (!meuNome || ouvinteConviteAtivo) return;
-    
-    ouvinteConviteAtivo = true;
-    const meuIdRef = meuNome.trim().toLowerCase();
-
-    onValue(ref(db, `partida_unica/convites/${meuIdRef}`), (snapshot) => {
-        const convite = snapshot.val();
-        if (!convite) return;
-
-        if (convite.status === 'pendente') {
-            // --- VOCÊ RECEBEU UM CONVITE ---
-            if (confirm(`${convite.de} está te desafiando! Aceitar?`)) {
-                modoJogo = 'online';
-                meuLado = 'preto'; // Convidado joga com as pretas
-
-                // 1. Atualiza status no banco
-                update(ref(db, `partida_unica/convites/${meuIdRef}`), { status: 'aceito' });
-                
-                // 2. Registra presença no jogo
-                set(ref(db, 'partida_unica/jogadores/preto'), true);
-                set(ref(db, 'partida_unica/nomes/preto'), meuNome);
-
-                // 3. VAI DIRETO PARA O TABULEIRO
-                entrarNoJogoDireto();
-                
-                // 4. Reseta o tabuleiro (Sincronizado)
-                window.reiniciar(); 
-            } else {
-                remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-            }
-
-        } else if (convite.status === 'aceito') {
-            // --- SEU CONVITE FOI ACEITO ---
-            alert(`${convite.de} aceitou seu desafio!`);
-            
-            modoJogo = 'online';
-            meuLado = 'vermelho'; // Desafiador joga com as vermelhas
-
-            // 1. Registra presença
-            set(ref(db, 'partida_unica/jogadores/vermelho'), true);
-            set(ref(db, 'partida_unica/nomes/vermelho'), meuNome);
-
-            // 2. VAI DIRETO PARA O TABULEIRO
-            entrarNoJogoDireto();
-
-            // 3. Limpa o convite
-            remove(ref(db, `partida_unica/convites/${meuIdRef}`));
-        }
-    });
-}
-
 // Função auxiliar para transição imediata
 function iniciarEscutaDeConvites() {
     if (!meuNome || ouvinteConviteAtivo) return;
