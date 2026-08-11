@@ -370,16 +370,17 @@ body.visao-preto .centro {
     }
     
 .logo-circle {
-    width: 70px; height: 70px;
+    width: 70px;
+    height: 70px;
     background: #222;
-    border-radius: 50%;
+    border-radius: 60%;
     margin: 0 auto 15px;
     display: flex; align-items: center; justify-content: center;
-    border: 2px solid #ffce00;
 }
+
 .logo-img {
-    width: 45px;
-    height: 45px;
+    width: 70px;
+    height: 70px;
     }
 
 /* Grid de Opções */
